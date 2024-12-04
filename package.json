@@ -7,14 +7,17 @@
   "scripts": {
     "dev": "bun run --watch src/index.ts",
     "start": "bun run dist/index.js",
-    "build": "bun build src/index.ts --outdir dist"
+    "build": "bun build src/index.ts --outdir dist",
+    "db:seed": "bun run prisma/seed.ts"
   },
   "dependencies": {
     "@elysiajs/cors": "latest",
+    "@prisma/client": "^5.7.0",
     "elysia": "latest",
     "openai": "^4.20.1"
   },
   "devDependencies": {
-    "bun-types": "latest"
+    "bun-types": "latest",
+    "prisma": "^5.7.0"
   }
 }
