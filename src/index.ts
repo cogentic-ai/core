@@ -1,6 +1,6 @@
 import { Elysia } from "elysia";
 import { cors } from "@elysiajs/cors";
-import { chat } from "./services/chat";
+import { chat } from "./services/chat.service";
 
 const app = new Elysia()
   .use(cors())

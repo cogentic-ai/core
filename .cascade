@@ -1,0 +1,60 @@
+{
+  "project": {
+    "name": "bun-api",
+    "type": "backend",
+    "framework": "bun",
+    "language": "typescript"
+  },
+  "style": {
+    "quotes": "double",
+    "semicolons": true,
+    "maxLineLength": 80,
+    "indentation": 2
+  },
+  "structure": {
+    "sourceDir": "src",
+    "testDir": "tests",
+    "directories": {
+      "lib": "Common utilities and shared resources",
+      "services": "Business logic and core functionality",
+      "routes": "API route handlers",
+      "types": "TypeScript type definitions",
+      "middleware": "Express/Elysia middleware"
+    }
+  },
+  "conventions": {
+    "files": {
+      "services": "{name}.service.ts",
+      "routes": "{name}.route.ts",
+      "types": "{name}.types.ts",
+      "middleware": "{name}.middleware.ts",
+      "tests": "{name}.test.ts"
+    },
+    "imports": {
+      "order": [
+        "node",
+        "external",
+        "internal",
+        "parent",
+        "sibling",
+        "index"
+      ]
+    }
+  },
+  "testing": {
+    "framework": "bun:test",
+    "coverage": true,
+    "patterns": {
+      "unit": "**/*.test.ts",
+      "integration": "**/*.integration.test.ts"
+    }
+  },
+  "communication": {
+    "style": "minimal",
+    "preferences": {
+      "skipExplanations": true,
+      "skipSummaries": true,
+      "focusOnCode": true
+    }
+  }
+}
