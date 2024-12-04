@@ -6,8 +6,8 @@
   "type": "module",
   "scripts": {
     "dev": "bun run --watch src/index.ts",
-    "start": "bun run src/index.ts",
-    "build": "bun build src/index.ts"
+    "start": "bun run dist/index.ts",
+    "build": "bun build src/index.ts --outdir dist"
   },
   "dependencies": {
     "@elysiajs/cors": "latest",
