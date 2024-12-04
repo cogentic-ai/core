@@ -1,0 +1,8 @@
+[build]
+builder = "nixpacks"
+buildCommand = "curl -fsSL https://bun.sh/install | bash && ~/.bun/bin/bun install"
+
+[deploy]
+startCommand = "~/.bun/bin/bun run src/index.ts"
+healthcheckPath = "/health"
+healthcheckTimeout = 100

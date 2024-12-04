@@ -2,8 +2,10 @@
   "name": "bun-api",
   "version": "1.0.0",
   "main": "src/index.ts",
+  "license": "MIT",
+  "type": "module",
   "scripts": {
-    "dev": "bun run src/index.ts",
+    "dev": "bun run --watch src/index.ts",
     "start": "bun run src/index.ts"
   },
   "dependencies": {
