@@ -2,6 +2,8 @@ import { Elysia } from "elysia";
 import { cors } from "@elysiajs/cors";
 import { chat } from "./services/chat.service";
 
+console.log("Starting server...");
+
 const app = new Elysia()
   .use(cors())
   .get("/", () => "Hello from Bun!")
