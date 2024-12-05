@@ -1,6 +1,5 @@
 import { Elysia } from "elysia";
 import { cors } from "@elysiajs/cors";
-import { researchWebsite } from "./agents/researcher.agent";
 import { comicAnalyzer } from "./agents/comic-analyzer";
 
 console.log("Starting server...");
@@ -17,13 +16,7 @@ try {
       console.log("Health check called");
       return { status: "ok" };
     })
-    .post("/research", async ({ body }) => {
-      if (typeof body !== "object" || !body || typeof body.url !== "string") {
-        throw new Error("URL is required in the request body");
-      }
-      return await researchWebsite(body.url);
-    })
-    .post("/analyze", async ({ body }) => {
+    .post("/analyze-comic", async ({ body }) => {
       if (
         typeof body !== "object" ||
         !body ||
@@ -51,9 +44,3 @@ try {
   console.error("Failed to start server:", error);
   process.exit(1);
 }
-
-// curl -X POST http://localhost:3000/analyze \
-//   -H "Content-Type: application/json" \
-//   -d '{
-//     "imageUrl": "https://static.wikia.nocookie.net/marveldatabase/images/0/0d/Tales_of_Suspense_Vol_1_49.jpg"
-//   }'
