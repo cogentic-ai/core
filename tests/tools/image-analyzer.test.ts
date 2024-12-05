@@ -11,58 +11,70 @@ describe("Image Analyzer Tool", () => {
   );
   const testImage = readFileSync(imagePath).toString("base64");
 
-  test("should analyze comic book cover", async () => {
+  test("should analyze comic book cover details", async () => {
     const result = await imageAnalyzerTool.execute(
       { deps: { openaiKey: process.env.OPENAI_API_KEY } },
       {
         base64Image: testImage,
-        prompt:
-          "This is a comic book cover. Describe the title, characters, and key visual elements. What issue number is it?",
+        prompt: "Return the title, issue number, and publisher of this comic book. Format the response as a JSON object with fields: title (string), issueNumber (number), and publisher (string).",
       }
     );
 
     expect(result.success).toBe(true);
-    expect(result.description).toBeDefined();
-    expect(result.description.toLowerCase()).toContain("iron man");
-    expect(result.tags).toBeDefined();
-    expect(Array.isArray(result.tags)).toBe(true);
-    expect(result.tags.length).toBeGreaterThan(0);
-    expect(Array.isArray(result.objects)).toBe(true);
-    expect(Array.isArray(result.colors)).toBe(true);
-    expect(result.metadata.confidence).toBeGreaterThanOrEqual(0);
-    expect(result.metadata.confidence).toBeLessThanOrEqual(1);
+    expect(result.result).toBeDefined();
+    expect(result.result.title.toLowerCase()).toContain("tales of suspense");
+    expect(result.result.issueNumber).toBe(49);
+    expect(result.result.publisher).toBeDefined();
     expect(result.metadata.model).toBe("gpt-4o-mini");
     expect(result.metadata.processingTime).toBeGreaterThan(0);
 
     console.log("Analysis Result:", JSON.stringify(result, null, 2));
-  }, 15000); // 15 second timeout for larger image
+  }, 15000);
 
-  test("should handle specific visual queries", async () => {
+  test("should analyze character costumes", async () => {
     const result = await imageAnalyzerTool.execute(
       { deps: { openaiKey: process.env.OPENAI_API_KEY } },
       {
         base64Image: testImage,
-        prompt:
-          "What colors are predominantly used in this comic cover? List them in order of prominence.",
+        prompt: "Analyze the costumes in this comic. Format the response as a JSON object with fields: costumes (array of costume descriptions), colors (array of color names), and materials (array of material names).",
       }
     );
 
     expect(result.success).toBe(true);
-    expect(result.description).toBeDefined();
-    expect(result.colors.length).toBeGreaterThan(0);
+    expect(result.result).toBeDefined();
+    expect(Array.isArray(result.result.costumes)).toBe(true);
+    expect(Array.isArray(result.result.colors)).toBe(true);
+    expect(Array.isArray(result.result.materials)).toBe(true);
+    expect(result.result.colors.some(color => color.toLowerCase().includes("red"))).toBe(true);
+  }, 15000);
+
+  test("should analyze scene composition", async () => {
+    const result = await imageAnalyzerTool.execute(
+      { deps: { openaiKey: process.env.OPENAI_API_KEY } },
+      {
+        base64Image: testImage,
+        prompt: "Analyze the layout and composition of this comic cover. Format the response as a JSON object with fields: mainElements (array of key visual elements), composition (object describing the layout), and focusPoint (string describing the main focus).",
+      }
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.result).toBeDefined();
+    expect(Array.isArray(result.result.mainElements)).toBe(true);
+    expect(typeof result.result.composition).toBe("object");
+    expect(typeof result.result.focusPoint).toBe("string");
   }, 15000);
 
   test("should validate input schema", () => {
     expect(() =>
       imageAnalyzerTool.schema.input.parse({
         base64Image: 123, // Should be string
-      })
+      } as any)
     ).toThrow();
 
     expect(() =>
       imageAnalyzerTool.schema.input.parse({
         base64Image: testImage,
-        prompt: "Analyze this",
+        prompt: "Tell me about this comic.",
       })
     ).not.toThrow();
   });
@@ -70,12 +82,12 @@ describe("Image Analyzer Tool", () => {
   test("should validate output schema", () => {
     const validOutput = {
       success: true,
-      description: "Tales of Suspense #49 featuring Iron Man",
-      tags: ["comic", "superhero", "Iron Man", "action"],
-      objects: ["armor", "robot", "machinery"],
-      colors: ["red", "gold", "blue"],
+      result: {
+        title: "Tales of Suspense",
+        issueNumber: 49,
+        description: "Iron Man in action",
+      },
       metadata: {
-        confidence: 0.95,
         model: "gpt-4o-mini",
         processingTime: 1234,
       },
@@ -86,13 +98,9 @@ describe("Image Analyzer Tool", () => {
     ).not.toThrow();
 
     const invalidOutput = {
-      success: true,
-      description: 123, // Should be string
-      tags: ["comic"],
-      objects: ["armor"],
-      colors: ["red"],
+      success: "true", // Should be boolean
+      result: {},
       metadata: {
-        confidence: 0.95,
         model: "gpt-4o-mini",
         processingTime: 1234,
       },
@@ -107,7 +115,10 @@ describe("Image Analyzer Tool", () => {
     try {
       await imageAnalyzerTool.execute(
         { deps: { openaiKey: process.env.OPENAI_API_KEY } },
-        { prompt: "Analyze this", base64Image: "not-base64" }
+        { 
+          base64Image: "not-base64",
+          prompt: "What's in this image?",
+        }
       );
       expect(false).toBe(true); // Should not reach here
     } catch (error) {
