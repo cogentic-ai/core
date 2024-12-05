@@ -16,7 +16,7 @@
     "testDir": "tests",
     "directories": {
       "lib": "Common utilities and shared resources",
-      "services": "Business logic and core functionality",
+      "agents": "Agentic logic and core functionality",
       "routes": "API route handlers",
       "types": "TypeScript type definitions",
       "middleware": "Express/Elysia middleware"
@@ -24,7 +24,7 @@
   },
   "conventions": {
     "files": {
-      "services": "{name}.service.ts",
+      "agents": "{name}.agents.ts",
       "routes": "{name}.route.ts",
       "types": "{name}.types.ts",
       "middleware": "{name}.middleware.ts",
