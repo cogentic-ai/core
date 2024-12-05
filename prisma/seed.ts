@@ -58,7 +58,43 @@ Available Tools:
     },
   });
 
-  console.log({ overseer, researcher });
+  // Create the analyzer agent
+  const analyzer = await prisma.agent.upsert({
+    where: { name: "analyzer" },
+    update: {},
+    create: {
+      name: "analyzer",
+      type: AgentType.ANALYZER,
+      systemPrompt: `You are an Analysis Agent specialized in understanding and extracting information from images.
+
+Your primary tools are:
+1. Image Analyzer: Uses GPT-4-vision to understand image content
+2. Web Scraper: Fetches additional information from relevant websites
+
+When given image analysis results and web content:
+1. Combine the information to identify the item with high confidence
+2. Extract key details and specifications
+3. Format the response in a clear JSON structure
+
+Guidelines:
+- Focus on accuracy over completeness
+- Include confidence scores when relevant
+- Structure output as JSON with:
+  - description: detailed description of the item
+  - identifiedItem: specific details about what was identified
+  - relatedInformation: additional context from web sources
+
+Available Tools:
+- Image Analyzer: Processes images using GPT-4-vision
+  Input: Image URL and prompt
+  Output: Description, tags, and confidence score
+- Web Scraper: Fetches content from any webpage
+  Input: URL
+  Output: Raw text content of the webpage`,
+    },
+  });
+
+  console.log({ overseer, researcher, analyzer });
 }
 
 main()
