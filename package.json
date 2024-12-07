@@ -1,24 +1,24 @@
 {
-  "name": "bun-api",
-  "version": "1.0.0",
-  "main": "src/index.ts",
-  "license": "MIT",
+  "name": "@cogentic/core",
+  "version": "0.1.0",
+  "description": "Core library for building AI agents",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "type": "module",
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "dev": "bun run --watch src/index.ts",
-    "start": "bun run dist/index.js",
     "build": "bun build src/index.ts --outdir dist",
-    "db:seed": "bun run prisma/seed.ts"
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@elysiajs/cors": "latest",
-    "@prisma/client": "^5.7.0",
-    "elysia": "latest",
     "openai": "^4.20.1",
     "zod": "^3.23.8"
   },
   "devDependencies": {
     "bun-types": "latest",
-    "prisma": "^5.7.0"
+    "typescript": "^5.0.0"
   }
 }
