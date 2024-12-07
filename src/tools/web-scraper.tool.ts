@@ -1,53 +1,42 @@
-import { z } from "zod";
-import { Tool } from "../lib/agent";
+async function fetchWebPage({ url }: { url: string }): Promise<string> {
+  const jinaUrl = `https://r.jina.ai/${url}`;
+  console.log(`Fetching URL: ${jinaUrl}`);
 
-const webScraperInputSchema = z.object({
-  url: z.string().url(),
-});
+  try {
+    const response = await fetch(jinaUrl);
 
-const webScraperOutputSchema = z.object({
-  success: z.boolean(),
-  content: z.string(),
-  metadata: z.object({
-    url: z.string().url(),
-    timestamp: z.string(),
-    statusCode: z.number(),
-  }),
-});
-
-type WebScraperInput = z.infer<typeof webScraperInputSchema>;
-type WebScraperOutput = z.infer<typeof webScraperOutputSchema>;
-
-export const webScraperTool: Tool<WebScraperInput, WebScraperOutput> = {
-  name: "web_scraper",
-  description: "Fetches and extracts content from a given URL",
-  schema: {
-    input: webScraperInputSchema,
-    output: webScraperOutputSchema,
-  },
-  async execute(_ctx: any, input: WebScraperInput): Promise<WebScraperOutput> {
-    try {
-      const response = await fetch(input.url);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const text = await response.text();
-
-      return {
-        success: true,
-        content: text,
-        metadata: {
-          url: input.url,
-          timestamp: new Date().toISOString(),
-          statusCode: response.status,
-        },
-      };
-    } catch (error) {
-      throw error instanceof Error 
-        ? error 
-        : new Error("Failed to fetch URL");
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
+
+    return await response.text();
+  } catch (error) {
+    throw error instanceof Error ? error : new Error("Failed to fetch URL");
+  }
+}
+
+const webScraperFunction = {
+  type: "function",
+  function: {
+    name: "fetch_web_page",
+    description:
+      "Fetches the content of a web page. Use this whenever you need to get the content of a URL.",
+    parameters: {
+      type: "object",
+      properties: {
+        url: {
+          type: "string",
+          description: "The URL to fetch. Must be a valid HTTP/HTTPS URL.",
+        },
+      },
+      required: ["url"],
+      additionalProperties: false,
+    },
   },
+};
+
+// Export both for use in the agent
+export const webScraper = {
+  implementation: fetchWebPage,
+  definition: webScraperFunction,
 };
