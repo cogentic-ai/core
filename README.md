@@ -1,6 +1,6 @@
 # @cogentic/core
 
-A powerful TypeScript framework for building intelligent AI agents. Built with OpenAI, this framework makes it easy to create, customize, and deploy AI agents for various tasks.
+A powerful TypeScript framework for building intelligent AI agents. Easily create, customize, and deploy AI agents for various tasks.
 
 ## Features
 
@@ -13,12 +13,12 @@ A powerful TypeScript framework for building intelligent AI agents. Built with O
 ## Installation
 
 ```bash
-# Using npm
-npm install @cogentic/core
+# Using bun
+bun add @cogentic/core
 
 # Using yarn
 yarn add @cogentic/core
 
-# Using bun
-bun add @cogentic/core
+# Using npm
+npm install @cogentic/core
 ```
