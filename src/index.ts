@@ -1,8 +1,9 @@
 export * from "./lib/agent";
 export * from "./lib/openai";
+export * from "./lib/cogentic";
 
 // Export specific agents
-export * from "./agents/comic-analyzer";
+export * from "./agents/reddit-summarizer";
 
 // Export tools
 export * from "./tools/image-analyzer.tool";
