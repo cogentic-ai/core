@@ -16,7 +16,8 @@ describe("Image Analyzer Tool", () => {
       { deps: { openaiKey: process.env.OPENAI_API_KEY } },
       {
         base64Image: testImage,
-        prompt: "Return the title, issue number, and publisher of this comic book. Format the response as a JSON object with fields: title (string), issueNumber (number), and publisher (string).",
+        prompt:
+          "Return the title, issue number, and publisher of this comic book. Format the response as a JSON object with fields: title (string), issueNumber (number), and publisher (string).",
       }
     );
 
@@ -28,7 +29,7 @@ describe("Image Analyzer Tool", () => {
     expect(result.metadata.model).toBe("gpt-4o-mini");
     expect(result.metadata.processingTime).toBeGreaterThan(0);
 
-    console.log("Analysis Result:", JSON.stringify(result, null, 2));
+    console.log("🎨 Vision magic...\n", JSON.stringify(result, null, 2));
   }, 15000);
 
   test("should analyze character costumes", async () => {
@@ -36,7 +37,8 @@ describe("Image Analyzer Tool", () => {
       { deps: { openaiKey: process.env.OPENAI_API_KEY } },
       {
         base64Image: testImage,
-        prompt: "Analyze the costumes in this comic. Format the response as a JSON object with fields: costumes (array of costume descriptions), colors (array of color names), and materials (array of material names).",
+        prompt:
+          "Analyze the costumes in this comic. Format the response as a JSON object with fields: costumes (array of costume descriptions), colors (array of color names), and materials (array of material names).",
       }
     );
 
@@ -45,7 +47,11 @@ describe("Image Analyzer Tool", () => {
     expect(Array.isArray(result.result.costumes)).toBe(true);
     expect(Array.isArray(result.result.colors)).toBe(true);
     expect(Array.isArray(result.result.materials)).toBe(true);
-    expect(result.result.colors.some(color => color.toLowerCase().includes("red"))).toBe(true);
+    expect(
+      result.result.colors.some((color: string) =>
+        color.toLowerCase().includes("red")
+      )
+    ).toBe(true);
   }, 15000);
 
   test("should analyze scene composition", async () => {
@@ -53,7 +59,8 @@ describe("Image Analyzer Tool", () => {
       { deps: { openaiKey: process.env.OPENAI_API_KEY } },
       {
         base64Image: testImage,
-        prompt: "Analyze the layout and composition of this comic cover. Format the response as a JSON object with fields: mainElements (array of key visual elements), composition (object describing the layout), and focusPoint (string describing the main focus).",
+        prompt:
+          "Analyze the layout and composition of this comic cover. Format the response as a JSON object with fields: mainElements (array of key visual elements), composition (object describing the layout), and focusPoint (string describing the main focus).",
       }
     );
 
@@ -115,7 +122,7 @@ describe("Image Analyzer Tool", () => {
     try {
       await imageAnalyzerTool.execute(
         { deps: { openaiKey: process.env.OPENAI_API_KEY } },
-        { 
+        {
           base64Image: "not-base64",
           prompt: "What's in this image?",
         }
