@@ -23,12 +23,14 @@ describe("Agent Integration Tests", () => {
         },
         required: ["input"],
       },
-      func: async (args: any) => `Echo: ${args.input}`,
+      func: async (args: any) => {
+        console.log("testTool called with input:", args.input);
+        return `Echo: ${args.input}`;
+      },
     };
 
     const agent = new Agent({
       model: "gpt-4o-mini",
-      temperature: 0.7,
       apiKey: OPENAI_API_KEY,
       tools: [testTool],
     });
@@ -37,10 +39,10 @@ describe("Agent Integration Tests", () => {
       const result = await agent.run(
         "Use the test tool with the input 'hello world'"
       );
-      console.log(result.data);
+
       console.log(result.cost);
 
-      expect(result.data).toContain("Echo:");
+      expect(result.data).toContain("Echo: hello world");
       expect(typeof result.cost).toBe("number");
     } catch (error: any) {
       if (

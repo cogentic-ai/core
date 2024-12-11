@@ -61,7 +61,6 @@ describe("Agent", () => {
   test("should create an agent with explicit API key", () => {
     const agent = new Agent({
       model: "gpt-4o-mini",
-      temperature: 0.7,
       apiKey: "test-key",
     });
 
@@ -73,7 +72,6 @@ describe("Agent", () => {
     process.env.OPENAI_API_KEY = "env-test-key";
     const agent = new Agent({
       model: "gpt-4o-mini",
-      temperature: 0.7,
     });
 
     expect(agent).toBeDefined();
@@ -86,7 +84,6 @@ describe("Agent", () => {
       () =>
         new Agent({
           model: "gpt-4o-mini",
-          temperature: 0.7,
         })
     ).toThrow(AgentError);
   });
@@ -94,7 +91,6 @@ describe("Agent", () => {
   test("should include system prompts in messages", async () => {
     const agent = new Agent({
       model: "gpt-4o-mini",
-      temperature: 0.7,
       apiKey: "test-key",
       systemPrompt: "You are a helpful AI assistant",
     });
@@ -111,7 +107,6 @@ describe("Agent", () => {
   test("should support dynamic system prompts", async () => {
     const agent = new Agent({
       model: "gpt-4o-mini",
-      temperature: 0.7,
       apiKey: "test-key",
     });
 
@@ -134,7 +129,6 @@ describe("Agent", () => {
 
     const agent = new Agent({
       model: "gpt-4o-mini",
-      temperature: 0.7,
       apiKey: "test-key",
     });
 
@@ -156,7 +150,6 @@ describe("Agent", () => {
 
     const agent = new Agent({
       model: "gpt-4o-mini",
-      temperature: 0.7,
       apiKey: "test-key",
     });
 
@@ -213,7 +206,6 @@ describe("Agent", () => {
 
     const agent = new Agent({
       model: "gpt-4o-mini",
-      temperature: 0.7,
       apiKey: "test-key",
       tools: [testTool],
     });
@@ -225,7 +217,6 @@ describe("Agent", () => {
   test("should validate results", async () => {
     const agent = new Agent({
       model: "gpt-4o-mini",
-      temperature: 0.7,
       apiKey: "test-key",
     });
 
@@ -266,7 +257,6 @@ describe("Agent", () => {
 
     const agent = new Agent({
       model: "gpt-4o-mini",
-      temperature: 0.7,
       apiKey: "test-key",
       retries: 3,
       resultRetries: 3,
@@ -297,7 +287,6 @@ describe("Agent", () => {
 
     const agent = new Agent({
       model: "gpt-4o-mini",
-      temperature: 0.7,
       apiKey: "test-key",
     });
 

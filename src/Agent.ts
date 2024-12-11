@@ -53,7 +53,7 @@ export type SystemPromptFunc = () => string | Promise<string>;
 
 export interface AgentConfig<T = string> {
   model: string;
-  temperature: number;
+  temperature?: number;
   apiKey?: string;
   name?: string;
   systemPrompt?: string | string[];
@@ -116,7 +116,7 @@ export class Agent<T = string> {
 
   constructor(config: AgentConfig<T>) {
     this.model = config.model;
-    this.temperature = config.temperature;
+    this.temperature = config.temperature ?? 0.2;
     this.name = config.name;
     this.defaultRetries = config.retries ?? 1;
     this.maxResultRetries = config.resultRetries ?? this.defaultRetries;
