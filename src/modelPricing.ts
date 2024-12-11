@@ -22,7 +22,7 @@ const MODEL_PRICES: Record<string, ModelPricing> = {
  * @param inputTokens Number of input tokens used
  * @param outputTokens Number of output tokens used
  * @returns Cost breakdown including input, output, and total costs in dollars
- * @throws Error if model pricing is not found
+ * @throws Error if model pricing is not found or token counts are negative
  */
 export function calculateCost(
   model: string,
@@ -32,6 +32,10 @@ export function calculateCost(
   const pricing = MODEL_PRICES[model];
   if (!pricing) {
     throw new Error(`Pricing not found for model: ${model}`);
+  }
+
+  if (inputTokens < 0 || outputTokens < 0) {
+    throw new Error("Token counts cannot be negative");
   }
 
   const inputCost = (inputTokens / 1_000_000) * pricing.inputTokenPrice;

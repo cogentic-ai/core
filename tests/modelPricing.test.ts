@@ -33,4 +33,13 @@ describe("Model Pricing", () => {
       "Pricing not found for model: unknown-model"
     );
   });
+
+  test("should throw error for negative token counts", () => {
+    expect(() => calculateCost("gpt-4o-mini", -100, 50)).toThrow(
+      "Token counts cannot be negative"
+    );
+    expect(() => calculateCost("gpt-4o-mini", 100, -50)).toThrow(
+      "Token counts cannot be negative"
+    );
+  });
 });
