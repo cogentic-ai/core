@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { calculateCost } from "./modelPricing";
 
 export class AgentError extends Error {
   constructor(message: string, public readonly cause?: Error) {
@@ -41,7 +42,9 @@ export interface Cost {
   promptTokens: number;
   completionTokens: number;
   totalTokens: number;
-  estimatedCost: number;
+  inputCost: number;
+  outputCost: number;
+  totalCost: number;
 }
 
 export type ResultValidator<T> = (result: T) => T | Promise<T>;
@@ -84,7 +87,9 @@ export class Agent<T = string> {
     promptTokens: 0,
     completionTokens: 0,
     totalTokens: 0,
-    estimatedCost: 0,
+    inputCost: 0,
+    outputCost: 0,
+    totalCost: 0,
   };
 
   constructor(config: AgentConfig<T>) {
@@ -160,14 +165,14 @@ export class Agent<T = string> {
             return {
               messages,
               data: result as T,
-              cost: this.cost.estimatedCost,
+              cost: this.cost.totalCost,
             };
           } else {
             const result = await this.handleResponse(response);
             return {
               messages,
               data: result as T,
-              cost: this.cost.estimatedCost,
+              cost: this.cost.totalCost,
             };
           }
         } catch (error: any) {
@@ -280,13 +285,19 @@ export class Agent<T = string> {
 
     // Update cost tracking
     if (response.usage) {
-      this.cost.promptTokens += response.usage.prompt_tokens;
-      this.cost.completionTokens += response.usage.completion_tokens;
-      this.cost.totalTokens += response.usage.total_tokens;
-      // Approximate cost calculation (you may want to adjust these rates)
-      this.cost.estimatedCost +=
-        response.usage.prompt_tokens * 0.0001 +
-        response.usage.completion_tokens * 0.0002;
+      this.cost.promptTokens = response.usage.prompt_tokens;
+      this.cost.completionTokens = response.usage.completion_tokens;
+      this.cost.totalTokens = response.usage.total_tokens;
+      
+      // Calculate costs using the new pricing module
+      const costs = calculateCost(
+        this.model,
+        response.usage.prompt_tokens,
+        response.usage.completion_tokens
+      );
+      this.cost.inputCost = costs.inputCost;
+      this.cost.outputCost = costs.outputCost;
+      this.cost.totalCost = costs.totalCost;
     }
 
     // Handle tool calls
