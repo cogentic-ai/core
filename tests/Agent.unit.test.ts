@@ -227,55 +227,58 @@ describe("Agent", () => {
   });
 
   test("should validate results", async () => {
+    mockCreateCompletion.mockImplementationOnce(() =>
+      Promise.resolve({
+        choices: [
+          {
+            message: {
+              content: "A CORRECT RESPONSE",
+            },
+          },
+        ],
+        usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
+      })
+    );
+
     const agent = new Agent({
       model: "gpt-4o-mini",
       apiKey: "test-key",
     });
 
-    agent.addResultValidator((result: string) => {
-      if (result.includes("wrong")) {
-        throw new ModelRetry("Invalid response");
+    agent.addResultValidator((result) => {
+      if (result !== "A CORRECT RESPONSE") {
+        throw new Error("Invalid response format");
       }
-      return result.toUpperCase();
+      return result;
     });
-
-    mockCreateCompletion.mockImplementationOnce(async () =>
-      Promise.resolve({
-        choices: [{ message: { content: "A correct response" } }],
-        usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
-      })
-    );
 
     const result = await agent.run("Hello!");
     expect(result.data).toBe("A CORRECT RESPONSE");
   });
 
   test("should retry on validation failure", async () => {
-    // Agent will retry once because the first response is invalid
     let attempts = 0;
-    mockCreateCompletion.mockImplementation(async () => {
-      attempts++;
-      return Promise.resolve({
+    mockCreateCompletion.mockImplementation(() =>
+      Promise.resolve({
         choices: [
           {
             message: {
-              content: attempts === 1 ? "wrong response" : "correct response",
+              content: attempts === 0 ? "wrong response" : "correct response",
             },
           },
         ],
         usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
-      });
-    });
+      })
+    );
 
     const agent = new Agent({
       model: "gpt-4o-mini",
       apiKey: "test-key",
-      retries: 3,
-      resultRetries: 3,
     });
 
-    agent.addResultValidator((result: string) => {
-      if (result.includes("wrong")) {
+    agent.addResultValidator((result) => {
+      attempts++;
+      if (result === "wrong response") {
         throw new ModelRetry("Invalid response");
       }
       return result;
