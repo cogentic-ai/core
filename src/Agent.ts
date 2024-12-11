@@ -51,7 +51,29 @@ export interface Cost {
 export type ResultValidator<T> = (result: T) => T | Promise<T>;
 export type SystemPromptFunc = () => string | Promise<string>;
 
-export interface AgentConfig<T = string> {
+export class AgentConfig {
+  private static instance: AgentConfig;
+  private _apiKey?: string;
+
+  private constructor() {}
+
+  static getInstance(): AgentConfig {
+    if (!AgentConfig.instance) {
+      AgentConfig.instance = new AgentConfig();
+    }
+    return AgentConfig.instance;
+  }
+
+  setApiKey(apiKey: string) {
+    this._apiKey = apiKey;
+  }
+
+  getApiKey(): string | undefined {
+    return this._apiKey || process.env.OPENAI_API_KEY;
+  }
+}
+
+export interface AgentOptions<T = string> {
   model: string;
   temperature?: number;
   apiKey?: string;
@@ -114,30 +136,30 @@ export class Agent<T = string> {
     totalCost: 0,
   };
 
-  constructor(config: AgentConfig<T>) {
-    this.model = config.model;
-    this.temperature = config.temperature ?? 0.2;
-    this.name = config.name;
-    this.defaultRetries = config.retries ?? 1;
-    this.maxResultRetries = config.resultRetries ?? this.defaultRetries;
+  constructor(options: AgentOptions<T>) {
+    this.model = options.model;
+    this.temperature = options.temperature ?? 0.2;
+    this.name = options.name;
+    this.defaultRetries = options.retries ?? 1;
+    this.maxResultRetries = options.resultRetries ?? this.defaultRetries;
 
-    this.systemPrompts = Array.isArray(config.systemPrompt)
-      ? config.systemPrompt
-      : config.systemPrompt
-      ? [config.systemPrompt]
+    this.systemPrompts = Array.isArray(options.systemPrompt)
+      ? options.systemPrompt
+      : options.systemPrompt
+      ? [options.systemPrompt]
       : [];
 
-    const apiKey = config.apiKey || process.env.OPENAI_API_KEY;
+    const apiKey = options.apiKey || AgentConfig.getInstance().getApiKey();
     if (!apiKey) {
       throw new AgentError(
-        "OpenAI API key is required. Provide it via constructor or OPENAI_API_KEY environment variable."
+        "OpenAI API key is required. Set it via AgentConfig.getInstance().setApiKey() or OPENAI_API_KEY environment variable."
       );
     }
 
     this.client = new OpenAI({ apiKey });
 
-    if (config.tools) {
-      for (const tool of config.tools) {
+    if (options.tools) {
+      for (const tool of options.tools) {
         this.registerTool(tool);
       }
     }

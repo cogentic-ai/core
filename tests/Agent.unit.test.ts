@@ -1,5 +1,5 @@
 import { expect, test, describe, beforeEach, mock } from "bun:test";
-import { Agent, AgentError, ModelRetry, Message, Tool } from "../src/Agent";
+import { Agent, AgentError, ModelRetry, Message, Tool, AgentConfig } from "../src/Agent";
 import OpenAI from "openai";
 import dotenv from "dotenv";
 
@@ -53,15 +53,26 @@ mock.module("openai", () => ({
 describe("Agent", () => {
   beforeEach(() => {
     // Reset env between tests
-    // process.env.OPENAI_API_KEY = undefined;
+    process.env.OPENAI_API_KEY = undefined;
     mockCreateCompletion.mockClear();
     mockCreateStreamingCompletion.mockClear();
   });
 
-  test("should create an agent with explicit API key", () => {
+  test("should create an agent with global API key", () => {
+    AgentConfig.getInstance().setApiKey("global-test-key");
     const agent = new Agent({
       model: "gpt-4o-mini",
-      apiKey: "test-key",
+    });
+
+    expect(agent).toBeDefined();
+    expect(agent.model).toBe("gpt-4o-mini");
+  });
+
+  test("should create an agent with explicit API key", () => {
+    AgentConfig.getInstance().setApiKey("global-test-key");
+    const agent = new Agent({
+      model: "gpt-4o-mini",
+      apiKey: "local-test-key", // This should override the global key
     });
 
     expect(agent).toBeDefined();
@@ -80,6 +91,7 @@ describe("Agent", () => {
 
   test("should throw error when no API key is provided", () => {
     process.env.OPENAI_API_KEY = undefined;
+    AgentConfig.getInstance().setApiKey(undefined);
     expect(
       () =>
         new Agent({

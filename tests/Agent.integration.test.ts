@@ -1,5 +1,5 @@
-import { expect, test, describe } from "bun:test";
-import { Agent } from "../src/Agent";
+import { expect, test, describe, beforeEach } from "bun:test";
+import { Agent, AgentConfig } from "../src/Agent";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -7,37 +7,37 @@ dotenv.config();
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 describe("Agent Integration Tests", () => {
+  beforeEach(() => {
+    // Set up the global API key
+    AgentConfig.getInstance().setApiKey(OPENAI_API_KEY);
+  });
+
   test("integration: should work with real OpenAI API and tool calls", async () => {
     if (!OPENAI_API_KEY) {
       console.log("Skipping OpenAI API test - no API key provided");
       return;
     }
 
-    const testTool = {
-      name: "testTool",
-      description: "A test tool that echoes input",
+    const testTool: Tool = {
+      name: "echo",
+      description: "Echo the input back",
       parameters: {
         type: "object",
         properties: {
           input: { type: "string" },
         },
-        required: ["input"],
       },
-      func: async (args: any) => {
-        console.log("testTool called with input:", args.input);
-        return `Echo: ${args.input}`;
-      },
+      func: async (args: any) => `Echo: ${args.input}`,
     };
 
     const agent = new Agent({
       model: "gpt-4o-mini",
-      apiKey: OPENAI_API_KEY,
       tools: [testTool],
     });
 
     try {
       const result = await agent.run(
-        "Use the test tool with the input 'hello world'"
+        "Use the echo tool with the input 'hello world'"
       );
 
       console.log(result.cost);
