@@ -284,4 +284,45 @@ describe("Agent", () => {
 
     expect(chunks).toEqual(["Hello", ", ", "I am streaming!"]);
   });
+
+  // Integration test with real OpenAI API
+  test.skipIf(!process.env.OPENAI_API_KEY)("should work with real OpenAI API", async () => {
+    const realAgent = new Agent({
+      model: "gpt-3.5-turbo",
+      temperature: 0.7,
+      apiKey: process.env.OPENAI_API_KEY!,
+      retries: 2,
+      resultRetries: 2,
+    });
+
+    // Add a simple validator to test the validation flow
+    realAgent.addResultValidator((result: string) => {
+      if (result.length < 10) {
+        throw new ModelRetry("Response too short");
+      }
+      return result;
+    });
+
+    // Add a simple tool to test function calling
+    realAgent.addTool({
+      name: "getCurrentTime",
+      description: "Get the current time",
+      parameters: {
+        type: "object",
+        properties: {},
+        required: [],
+      },
+      func: async () => {
+        return new Date().toISOString();
+      },
+    });
+
+    const result = await realAgent.run(
+      "Please respond with a thoughtful message about AI and mention the current time."
+    );
+
+    expect(result.data).toBeTruthy();
+    expect(result.data.length).toBeGreaterThan(10);
+    expect(result.cost.totalTokens).toBeGreaterThan(0);
+  }, 30000); // Increase timeout for API call
 });
