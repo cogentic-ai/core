@@ -180,6 +180,7 @@ describe("Agent", () => {
               content: null,
               tool_calls: [
                 {
+                  id: "call_1234",
                   type: "function",
                   function: {
                     name: "testTool",
