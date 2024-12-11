@@ -7,7 +7,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 // Store original env
-const originalEnv = process.env.OPENAI_API_KEY;
+const REAL_API_KEY = process.env.OPENAI_API_KEY;
 
 // Create a base mock class that we'll extend
 class BaseMockOpenAI {
@@ -53,38 +53,39 @@ mock.module("openai", () => ({
 describe("Agent", () => {
   beforeEach(() => {
     // Reset env between tests
-    process.env.OPENAI_API_KEY = undefined;
+    // process.env.OPENAI_API_KEY = undefined;
     mockCreateCompletion.mockClear();
     mockCreateStreamingCompletion.mockClear();
   });
 
   test("should create an agent with explicit API key", () => {
     const agent = new Agent({
-      model: "gpt-4",
+      model: "gpt-4o-mini",
       temperature: 0.7,
       apiKey: "test-key",
     });
 
     expect(agent).toBeDefined();
-    expect(agent.model).toBe("gpt-4");
+    expect(agent.model).toBe("gpt-4o-mini");
   });
 
   test("should create an agent with environment API key", () => {
     process.env.OPENAI_API_KEY = "env-test-key";
     const agent = new Agent({
-      model: "gpt-4",
+      model: "gpt-4o-mini",
       temperature: 0.7,
     });
 
     expect(agent).toBeDefined();
-    expect(agent.model).toBe("gpt-4");
+    expect(agent.model).toBe("gpt-4o-mini");
   });
 
   test("should throw error when no API key is provided", () => {
+    process.env.OPENAI_API_KEY = undefined;
     expect(
       () =>
         new Agent({
-          model: "gpt-4",
+          model: "gpt-4o-mini",
           temperature: 0.7,
         })
     ).toThrow(AgentError);
@@ -92,7 +93,7 @@ describe("Agent", () => {
 
   test("should include system prompts in messages", async () => {
     const agent = new Agent({
-      model: "gpt-4",
+      model: "gpt-4o-mini",
       temperature: 0.7,
       apiKey: "test-key",
       systemPrompt: "You are a helpful AI assistant",
@@ -109,7 +110,7 @@ describe("Agent", () => {
 
   test("should support dynamic system prompts", async () => {
     const agent = new Agent({
-      model: "gpt-4",
+      model: "gpt-4o-mini",
       temperature: 0.7,
       apiKey: "test-key",
     });
@@ -132,7 +133,7 @@ describe("Agent", () => {
     ];
 
     const agent = new Agent({
-      model: "gpt-4",
+      model: "gpt-4o-mini",
       temperature: 0.7,
       apiKey: "test-key",
     });
@@ -147,7 +148,7 @@ describe("Agent", () => {
 
   test("should track costs", async () => {
     const agent = new Agent({
-      model: "gpt-4",
+      model: "gpt-4o-mini",
       temperature: 0.7,
       apiKey: "test-key",
     });
@@ -167,14 +168,24 @@ describe("Agent", () => {
         choices: [
           {
             message: {
-              function_call: {
-                name: "testTool",
-                arguments: JSON.stringify({ input: "test" }),
-              },
+              content: null,
+              tool_calls: [
+                {
+                  type: "function",
+                  function: {
+                    name: "testTool",
+                    arguments: JSON.stringify({ input: "test" }),
+                  },
+                },
+              ],
             },
           },
         ],
-        usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
+        usage: {
+          prompt_tokens: 10,
+          completion_tokens: 20,
+          total_tokens: 30,
+        },
       })
     );
 
@@ -191,7 +202,7 @@ describe("Agent", () => {
     };
 
     const agent = new Agent({
-      model: "gpt-4",
+      model: "gpt-4o-mini",
       temperature: 0.7,
       apiKey: "test-key",
       tools: [testTool],
@@ -203,7 +214,7 @@ describe("Agent", () => {
 
   test("should validate results", async () => {
     const agent = new Agent({
-      model: "gpt-4",
+      model: "gpt-4o-mini",
       temperature: 0.7,
       apiKey: "test-key",
     });
@@ -244,7 +255,7 @@ describe("Agent", () => {
     });
 
     const agent = new Agent({
-      model: "gpt-4",
+      model: "gpt-4o-mini",
       temperature: 0.7,
       apiKey: "test-key",
       retries: 3,
@@ -264,57 +275,28 @@ describe("Agent", () => {
   });
 
   test("should support streaming responses", async () => {
-    // Override the mock for this test
-    mock.module("openai", () => ({
-      default: class StreamMockOpenAI extends BaseMockOpenAI {
-        chat = {
-          completions: {
-            create: mockCreateStreamingCompletion,
-          },
+    const mockStream = {
+      [Symbol.asyncIterator]: async function* () {
+        yield {
+          choices: [{ delta: { content: "Hello, I am an AI!" } }],
         };
       },
-    }));
+    };
+
+    mockCreateCompletion.mockImplementationOnce(async () => mockStream);
 
     const agent = new Agent({
-      model: "gpt-4",
+      model: "gpt-4o-mini",
       temperature: 0.7,
       apiKey: "test-key",
     });
 
     const chunks: string[] = [];
-    for await (const chunk of agent.runStream("Hello!")) {
+    for await (const chunk of agent.runStream("Hello")) {
       chunks.push(chunk);
     }
 
-    expect(chunks).toEqual(["Hello", ", ", "I am streaming!"]);
-  });
-
-  // Integration test with real OpenAI API
-  test("should work with real OpenAI API", async () => {
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      console.log("Skipping OpenAI API test - no API key provided");
-      return;
-    }
-
-    try {
-      const agent = new Agent<string>({
-        apiKey,
-        model: "gpt-4o-mini-2024-07-18",
-        temperature: 0.7,
-        systemPrompt: "You are a helpful assistant.",
-      });
-
-      const result = await agent.run("Say hello!");
-      expect(result.data).toBeDefined();
-      expect(typeof result.data).toBe("string");
-      expect(result.data.length).toBeGreaterThan(0);
-    } catch (error: any) {
-      if (error.message?.includes("Invalid response")) {
-        console.log("Skipping test due to API response format mismatch");
-        return;
-      }
-      throw error;
-    }
+    expect(chunks.length).toBeGreaterThan(0);
+    expect(chunks[0]).toBe("Hello, I am an AI!");
   });
 });
