@@ -5,6 +5,15 @@ import OpenAI from "openai";
 // Store original env
 const originalEnv = process.env.OPENAI_API_KEY;
 
+// Create a base mock class that we'll extend
+class BaseMockOpenAI {
+  chat = {
+    completions: {
+      create: mock(() => Promise.resolve({})),
+    },
+  };
+}
+
 const mockCreateCompletion = mock(async () =>
   Promise.resolve({
     choices: [{ message: { content: "Hello, I am an AI!" } }],
@@ -28,7 +37,7 @@ const mockCreateStreamingCompletion = mock(async () =>
 
 // Mock OpenAI client
 mock.module("openai", () => ({
-  default: class MockOpenAI {
+  default: class MockOpenAI extends BaseMockOpenAI {
     chat = {
       completions: {
         create: mockCreateCompletion,
@@ -42,6 +51,7 @@ describe("Agent", () => {
     // Reset env between tests
     process.env.OPENAI_API_KEY = undefined;
     mockCreateCompletion.mockClear();
+    mockCreateStreamingCompletion.mockClear();
   });
 
   test("should create an agent with explicit API key", () => {
@@ -146,7 +156,7 @@ describe("Agent", () => {
   });
 
   test("should handle tool calls", async () => {
-    mockCreateCompletion.mockImplementation(async () =>
+    mockCreateCompletion.mockImplementationOnce(async () =>
       Promise.resolve({
         choices: [
           {
@@ -230,7 +240,8 @@ describe("Agent", () => {
       model: "gpt-4",
       temperature: 0.7,
       apiKey: "test-key",
-      retries: 2,
+      retries: 3,
+      resultRetries: 3,
     });
 
     agent.addResultValidator((result: string) => {
@@ -246,17 +257,15 @@ describe("Agent", () => {
   });
 
   test("should support streaming responses", async () => {
-    const MockOpenAIWithStream = class extends MockOpenAI {
-      chat = {
-        completions: {
-          create: mockCreateStreamingCompletion,
-        },
-      };
-    };
-
     // Override the mock for this test
     mock.module("openai", () => ({
-      default: MockOpenAIWithStream,
+      default: class StreamMockOpenAI extends BaseMockOpenAI {
+        chat = {
+          completions: {
+            create: mockCreateStreamingCompletion,
+          },
+        };
+      },
     }));
 
     const agent = new Agent({
