@@ -144,12 +144,9 @@ export class Agent<T = string> {
                         function_call: this.tools.size > 0 ? "auto" : undefined,
                         response_format: { type: "text" }
                     });
-                    console.log("OpenAI Response:", JSON.stringify(response, null, 2));
-                    console.log("OpenAI Response Type:", typeof response);
-                    console.log("OpenAI Response Keys:", Object.keys(response));
+
                     if (response instanceof Response) {
                         const json = await response.json();
-                        console.log("Parsed Response:", JSON.stringify(json, null, 2));
                         const result = await this.handleResponse(json);
                         return {
                             messages,
@@ -165,10 +162,7 @@ export class Agent<T = string> {
                         };
                     }
                 } catch (error: any) {
-                    console.error(`OpenAI API Error (attempt ${i + 1}/${this.defaultRetries}):`, error.response?.data || error.message);
-                    if (error.response?.data) {
-                        console.error("Full error response:", JSON.stringify(error.response.data, null, 2));
-                    }
+                    console.error(`OpenAI API Error (attempt ${i + 1}/${this.defaultRetries}):`, error.message);
                     lastError = error;
                     if (i < this.defaultRetries - 1) {
                         await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1))); // Exponential backoff

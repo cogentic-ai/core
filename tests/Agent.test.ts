@@ -301,6 +301,7 @@ describe("Agent", () => {
       const agent = new Agent<string>({
         apiKey,
         model: "gpt-4o-mini-2024-07-18",
+        temperature: 0.7,
         systemPrompt: "You are a helpful assistant.",
       });
 
