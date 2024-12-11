@@ -135,6 +135,8 @@ console.log(result.data); // Output: 8
    ```bash
    bun test                # Run all tests
    bun test Agent.test.ts  # Run unit tests only
+   bun test integration    # Run integration tests only
+   bun test --timeout 30000 integration  # Run integration tests with longer timeout
    bun test:watch         # Watch mode
    ```
 
@@ -144,7 +146,7 @@ The test suite is split into two parts:
 - Unit tests (`Agent.test.ts`): Mock the OpenAI API to test core functionality
 - Integration tests (`Agent.integration.test.ts`): Test with the real OpenAI API
 
-Integration tests will be skipped if no API key is provided.
+Integration tests will be skipped if no API key is provided. When running integration tests, you may want to increase the timeout using the `--timeout` flag since they make real API calls.
 
 ### Error Handling
 

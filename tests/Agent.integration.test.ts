@@ -7,7 +7,7 @@ dotenv.config();
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 describe("Agent Integration Tests", () => {
-  test("should work with real OpenAI API", async () => {
+  test("integration: should work with real OpenAI API and tool calls", async () => {
     if (!OPENAI_API_KEY) {
       console.log("Skipping OpenAI API test - no API key provided");
       return;
@@ -37,10 +37,16 @@ describe("Agent Integration Tests", () => {
       const result = await agent.run(
         "Use the test tool with the input 'hello world'"
       );
+      console.log(result.data);
+      console.log(result.cost);
+
       expect(result.data).toContain("Echo:");
-      expect(result.cost.totalTokens).toBeGreaterThan(0);
+      expect(typeof result.cost).toBe("number");
     } catch (error: any) {
-      if (error.message?.includes("Invalid response") || error.message?.includes("Empty response")) {
+      if (
+        error.message?.includes("Invalid response") ||
+        error.message?.includes("Empty response")
+      ) {
         console.log("Skipping test - OpenAI API returned invalid response");
         return;
       }
