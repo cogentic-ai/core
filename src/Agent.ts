@@ -147,8 +147,8 @@ export class Agent<T = string> {
                 cost: this.cost.estimatedCost,
             };
         } catch (error) {
-            this.currentRetry++;
-            if (this.currentRetry < this.maxResultRetries) {
+            if (error instanceof ModelRetry && this.currentRetry < this.maxResultRetries) {
+                this.currentRetry++;
                 return this.run(userPrompt, options);
             }
             
@@ -247,7 +247,7 @@ export class Agent<T = string> {
             } catch (error) {
                 if (tool.retries && tool.retries > 0) {
                     tool.retries--;
-                    return this.handleResponse(response);
+                    throw new ModelRetry("Tool retry");
                 }
                 throw error;
             }
@@ -261,10 +261,8 @@ export class Agent<T = string> {
             try {
                 result = await validator(result);
             } catch (error) {
-                if (error instanceof ModelRetry && this.currentRetry < this.maxResultRetries) {
-                    this.currentRetry++;
-                    // Retry with the same messages
-                    return this.handleResponse(response);
+                if (error instanceof ModelRetry) {
+                    throw error; // Let run() method handle the retry
                 }
                 throw error;
             }

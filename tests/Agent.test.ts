@@ -96,7 +96,7 @@ describe("Agent", () => {
 
     await agent.run("Hello!");
     const messages = agent.getLastRunMessages();
-    
+
     expect(messages?.[0]).toEqual({
       role: "system",
       content: "You are a helpful AI assistant",
@@ -114,9 +114,11 @@ describe("Agent", () => {
     await agent.run("Hello!");
     const messages = agent.getLastRunMessages();
 
-    expect(messages?.some(m => 
-      m.role === "system" && m.content === "Dynamic prompt"
-    )).toBe(true);
+    expect(
+      messages?.some(
+        (m) => m.role === "system" && m.content === "Dynamic prompt"
+      )
+    ).toBe(true);
   });
 
   test("should include message history in conversation", async () => {
@@ -221,6 +223,7 @@ describe("Agent", () => {
   });
 
   test("should retry on validation failure", async () => {
+    // Agent will retry once because the first response is invalid
     let attempts = 0;
     mockCreateCompletion.mockImplementation(async () => {
       attempts++;
@@ -252,8 +255,8 @@ describe("Agent", () => {
     });
 
     const result = await agent.run("Hello!");
+    expect(attempts).toBe(2); // Should try twice: first fails, second succeeds
     expect(result.data).toBe("correct response");
-    expect(attempts).toBe(2);
   });
 
   test("should support streaming responses", async () => {
