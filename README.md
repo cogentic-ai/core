@@ -25,7 +25,7 @@ There are two ways to configure the OpenAI API key:
    import { Agent } from 'cogentic-ai-typescript';
 
    const agent = new Agent({
-     model: 'openai:gpt-4-mini',
+     model: 'gpt-4o-mini',
      temperature: 0.7,
      apiKey: 'your-api-key-here' // Optional if OPENAI_API_KEY is set
    });
@@ -46,15 +46,18 @@ dotenv.config();
 
 ## Usage
 
+### Basic Chat
+
 ```typescript
 const agent = new Agent({
-  model: 'openai:gpt-4-mini',
+  model: 'gpt-4o-mini',
   temperature: 0.7
 });
 
 try {
-  const response = await agent.chat('Hello, AI!');
-  console.log(response);
+  const result = await agent.run('Hello, AI!');
+  console.log(result.data);
+  console.log('Cost:', result.cost);
 } catch (error) {
   if (error instanceof AgentError) {
     console.error('Agent error:', error.message);
@@ -63,6 +66,58 @@ try {
     }
   }
 }
+```
+
+### Streaming Responses
+
+```typescript
+const agent = new Agent({
+  model: 'gpt-4o-mini',
+  temperature: 0.7
+});
+
+// Using async iterator
+for await (const chunk of agent.runStream('Tell me a story')) {
+  process.stdout.write(chunk);
+}
+```
+
+### Tool Calls
+
+```typescript
+const calculator = {
+  name: 'calculator',
+  description: 'Perform basic arithmetic operations',
+  parameters: {
+    type: 'object',
+    properties: {
+      operation: {
+        type: 'string',
+        enum: ['add', 'subtract', 'multiply', 'divide']
+      },
+      a: { type: 'number' },
+      b: { type: 'number' }
+    },
+    required: ['operation', 'a', 'b']
+  },
+  func: async (args: any) => {
+    switch (args.operation) {
+      case 'add': return args.a + args.b;
+      case 'subtract': return args.a - args.b;
+      case 'multiply': return args.a * args.b;
+      case 'divide': return args.a / args.b;
+    }
+  }
+};
+
+const agent = new Agent({
+  model: 'gpt-4o-mini',
+  temperature: 0.7,
+  tools: [calculator]
+});
+
+const result = await agent.run('What is 5 + 3?');
+console.log(result.data); // Output: 8
 ```
 
 ## Development
@@ -78,7 +133,25 @@ try {
    ```
 4. Run tests:
    ```bash
-   bun test
-   # or watch mode
-   bun test:watch
+   bun test                # Run all tests
+   bun test Agent.test.ts  # Run unit tests only
+   bun test:watch         # Watch mode
    ```
+
+### Testing
+
+The test suite is split into two parts:
+- Unit tests (`Agent.test.ts`): Mock the OpenAI API to test core functionality
+- Integration tests (`Agent.integration.test.ts`): Test with the real OpenAI API
+
+Integration tests will be skipped if no API key is provided.
+
+### Error Handling
+
+The Agent class provides detailed error information through the `AgentError` class:
+- Missing API key
+- Invalid responses
+- Empty responses
+- Tool execution errors
+
+All errors include the original cause when available.
