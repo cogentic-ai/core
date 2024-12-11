@@ -147,6 +147,13 @@ describe("Agent", () => {
   });
 
   test("should track costs", async () => {
+    mockCreateCompletion.mockImplementationOnce(async () =>
+      Promise.resolve({
+        choices: [{ message: { content: "Hello, I am an AI!" } }],
+        usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
+      })
+    );
+
     const agent = new Agent({
       model: "gpt-4o-mini",
       temperature: 0.7,
@@ -159,7 +166,9 @@ describe("Agent", () => {
     expect(cost.promptTokens).toBe(10);
     expect(cost.completionTokens).toBe(20);
     expect(cost.totalTokens).toBe(30);
-    expect(cost.estimatedCost).toBeGreaterThan(0);
+    expect(cost.inputCost).toBeGreaterThan(0);
+    expect(cost.outputCost).toBeGreaterThan(0);
+    expect(cost.totalCost).toBeGreaterThan(0);
   });
 
   test("should handle tool calls", async () => {
