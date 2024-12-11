@@ -17,9 +17,10 @@ export class ModelRetry extends Error {
 
 export interface Message {
   role: "user" | "assistant" | "system" | "tool";
-  content: string;
+  content: string | null;
   name?: string;
   tool_calls?: {
+    id: string;
     type: "function";
     function: {
       name: string;
@@ -68,6 +69,27 @@ export interface Tool {
   parameters: Record<string, any>;
   func: (...args: any[]) => any;
   retries?: number;
+}
+
+export interface OpenAIResponse {
+  choices: {
+    message: {
+      content: string | null;
+      tool_calls?: {
+        id: string;
+        type: "function";
+        function: {
+          name: string;
+          arguments: string;
+        };
+      }[];
+    };
+  }[];
+  usage: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+  };
 }
 
 export class Agent<T = string> {
@@ -272,7 +294,7 @@ export class Agent<T = string> {
     return messages;
   }
 
-  private async handleResponse(response: any): Promise<T> {
+  private async handleResponse(response: OpenAIResponse): Promise<T> {
     if (!response || !response.choices || !response.choices[0]) {
       throw new AgentError("Invalid response from OpenAI: missing choices");
     }
