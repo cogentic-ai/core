@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import { calculateCost } from "./modelPricing";
+import { z } from "zod";
 
 export class AgentError extends Error {
   constructor(message: string, public readonly cause?: Error) {
@@ -79,7 +80,7 @@ export interface AgentOptions<T = string> {
   apiKey?: string;
   name?: string;
   systemPrompt?: string | string[];
-  resultType?: new () => T;
+  resultType?: z.ZodType<T>;
   retries?: number;
   resultRetries?: number;
   tools?: Tool[];
@@ -115,7 +116,7 @@ export interface OpenAIResponse {
 }
 
 export class Agent<T = string> {
-  readonly model: string;
+  private readonly model: string;
   private temperature: number;
   private client: OpenAI;
   private name?: string;
@@ -124,8 +125,8 @@ export class Agent<T = string> {
   private defaultRetries: number;
   private maxResultRetries: number;
   private currentRetry: number = 0;
-  private tools: Map<string, Tool> = new Map();
-  private resultValidators: ResultValidator<T>[] = [];
+  private tools: Tool[] = [];
+  private resultType?: z.ZodType<T>;
   private systemPromptFunctions: SystemPromptFunc[] = [];
   private cost: Cost = {
     promptTokens: 0,
@@ -135,6 +136,7 @@ export class Agent<T = string> {
     outputCost: 0,
     totalCost: 0,
   };
+  private resultValidators: ResultValidator<T>[] = [];
 
   constructor(options: AgentOptions<T>) {
     this.model = options.model;
@@ -142,6 +144,7 @@ export class Agent<T = string> {
     this.name = options.name;
     this.defaultRetries = options.retries ?? 1;
     this.maxResultRetries = options.resultRetries ?? this.defaultRetries;
+    this.resultType = options.resultType;
 
     this.systemPrompts = Array.isArray(options.systemPrompt)
       ? options.systemPrompt
@@ -173,11 +176,11 @@ export class Agent<T = string> {
     } = {}
   ): Promise<RunResult<T>> {
     try {
-      const messages = this.prepareMessages(userPrompt, options.messageHistory);
+      const messages = await this.prepareMessages(userPrompt, options.messageHistory);
       this.lastRunMessages = messages;
 
       // Reset tool retries
-      for (const tool of this.tools.values()) {
+      for (const tool of this.tools) {
         tool.retries = this.defaultRetries;
       }
 
@@ -188,7 +191,7 @@ export class Agent<T = string> {
             model: options.model || this.model,
             temperature: this.temperature,
             messages: messages as any[],
-            tools: Array.from(this.tools.values()).map((tool) => ({
+            tools: this.tools.map((tool) => ({
               type: "function",
               function: {
                 name: tool.name,
@@ -196,7 +199,7 @@ export class Agent<T = string> {
                 parameters: tool.parameters,
               },
             })),
-            tool_choice: this.tools.size > 0 ? "auto" : "none",
+            tool_choice: this.tools.length > 0 ? "auto" : "none",
           });
 
           if (!response || Object.keys(response).length === 0) {
@@ -205,26 +208,65 @@ export class Agent<T = string> {
 
           if (response instanceof Response) {
             const json = await response.json();
-            const result = await this.handleResponse(json);
+            const data = await this.handleResponse(json);
+
+            // Run result validators
+            if (this.resultValidators.length > 0) {
+              try {
+                let result = data;
+                for (const validator of this.resultValidators) {
+                  result = await validator(result);
+                }
+                return {
+                  messages,
+                  data: result as T,
+                  cost: this.cost.totalCost,
+                };
+              } catch (error) {
+                if (error instanceof ModelRetry && this.currentRetry < this.maxResultRetries) {
+                  this.currentRetry++;
+                  return this.run(userPrompt, options);
+                }
+                throw error;
+              }
+            }
+
             return {
               messages,
-              data: result as T,
+              data: data as T,
               cost: this.cost.totalCost,
             };
           } else {
-            const result = await this.handleResponse(response);
+            const data = await this.handleResponse(response);
+
+            // Run result validators
+            if (this.resultValidators.length > 0) {
+              try {
+                let result = data;
+                for (const validator of this.resultValidators) {
+                  result = await validator(result);
+                }
+                return {
+                  messages,
+                  data: result as T,
+                  cost: this.cost.totalCost,
+                };
+              } catch (error) {
+                if (error instanceof ModelRetry && this.currentRetry < this.maxResultRetries) {
+                  this.currentRetry++;
+                  return this.run(userPrompt, options);
+                }
+                throw error;
+              }
+            }
+
             return {
               messages,
-              data: result as T,
+              data: data as T,
               cost: this.cost.totalCost,
             };
           }
         } catch (error: any) {
-          console.error(
-            `OpenAI API Error (attempt ${i + 1}/${this.defaultRetries}):`,
-            error.message,
-            error.response?.data ? JSON.stringify(error.response.data) : ""
-          );
           lastError = error;
           if (i < this.defaultRetries - 1) {
             await new Promise((resolve) => setTimeout(resolve, 1000 * (i + 1))); // Exponential backoff
@@ -245,10 +287,10 @@ export class Agent<T = string> {
         return this.run(userPrompt, options);
       }
 
-      if (error instanceof Error) {
-        throw new AgentError("Failed to chat with OpenAI", error);
+      if (error instanceof AgentError) {
+        throw error;
       }
-      throw new AgentError("An unknown error occurred");
+      throw new AgentError("Failed to chat with OpenAI", error);
     }
   }
 
@@ -259,7 +301,7 @@ export class Agent<T = string> {
       model?: string;
     } = {}
   ): AsyncGenerator<string, void, unknown> {
-    const messages = this.prepareMessages(userPrompt, options.messageHistory);
+    const messages = await this.prepareMessages(userPrompt, options.messageHistory);
     this.lastRunMessages = messages;
 
     const stream = await this.client.chat.completions.create({
@@ -267,7 +309,7 @@ export class Agent<T = string> {
       temperature: this.temperature,
       messages: messages as any[],
       stream: true,
-      tools: Array.from(this.tools.values()).map((tool) => ({
+      tools: this.tools.map((tool) => ({
         type: "function",
         function: {
           name: tool.name,
@@ -275,7 +317,7 @@ export class Agent<T = string> {
           parameters: tool.parameters,
         },
       })),
-      tool_choice: this.tools.size > 0 ? "auto" : "none",
+      tool_choice: this.tools.length > 0 ? "auto" : "none",
     });
 
     for await (const chunk of stream) {
@@ -286,10 +328,10 @@ export class Agent<T = string> {
     }
   }
 
-  private prepareMessages(
+  private async prepareMessages(
     userPrompt: string,
     messageHistory?: Message[]
-  ): Message[] {
+  ): Promise<Message[]> {
     const messages: Message[] = [];
 
     // Add system prompts
@@ -299,14 +341,14 @@ export class Agent<T = string> {
 
     // Add dynamic system prompts
     for (const promptFunc of this.systemPromptFunctions) {
-      const prompt = promptFunc();
-      if (typeof prompt === "string") {
+      const prompt = await promptFunc();
+      if (prompt) {
         messages.push({ role: "system", content: prompt });
       }
     }
 
     // Add message history if provided
-    if (messageHistory?.length) {
+    if (messageHistory) {
       messages.push(...messageHistory);
     }
 
@@ -317,23 +359,40 @@ export class Agent<T = string> {
   }
 
   private async handleResponse(response: OpenAIResponse): Promise<T> {
-    if (!response || !response.choices || !response.choices[0]) {
-      throw new AgentError("Invalid response from OpenAI: missing choices");
-    }
-
-    const choice = response.choices[0];
-    const message = choice.message;
+    const message = response.choices[0]?.message;
+    
     if (!message) {
-      throw new AgentError("Invalid response from OpenAI: missing message");
+      throw new AgentError("No message in response");
     }
 
-    // Update cost tracking
+    // Handle tool calls
+    if (message.tool_calls?.length) {
+      const toolCall = message.tool_calls[0];
+      if (toolCall.type === "function") {
+        const tool = this.tools.find((t) => t.name === toolCall.function.name);
+        if (!tool) {
+          throw new AgentError(`Tool not found: ${toolCall.function.name}`);
+        }
+
+        const args = JSON.parse(toolCall.function.arguments);
+        const result = await tool.func(args);
+        return result as T;
+      }
+    }
+
+    // Handle regular content
+    const content = message.content;
+    if (content === null || content === undefined) {
+      throw new AgentError("No content in response");
+    }
+
+    // Update usage statistics
     if (response.usage) {
-      this.cost.promptTokens = response.usage.prompt_tokens;
-      this.cost.completionTokens = response.usage.completion_tokens;
-      this.cost.totalTokens = response.usage.total_tokens;
+      this.cost.promptTokens += response.usage.prompt_tokens;
+      this.cost.completionTokens += response.usage.completion_tokens;
+      this.cost.totalTokens += response.usage.total_tokens;
       
-      // Calculate costs using the new pricing module
+      // Calculate costs using the pricing module
       const costs = calculateCost(
         this.model,
         response.usage.prompt_tokens,
@@ -344,48 +403,35 @@ export class Agent<T = string> {
       this.cost.totalCost = costs.totalCost;
     }
 
-    // Handle tool calls
-    if (message.tool_calls && message.tool_calls.length > 0) {
-      // For now, we'll just handle the first tool call
-      const toolCall = message.tool_calls[0];
-      if (toolCall.type !== "function") {
-        throw new AgentError(`Unsupported tool type: ${toolCall.type}`);
+    // If we have a result type, try to validate
+    if (this.resultType) {
+      // For union types that include string, try direct validation first
+      const directResult = this.resultType.safeParse(content);
+      if (directResult.success) {
+        return directResult.data;
       }
 
-      const tool = this.tools.get(toolCall.function.name);
-      if (!tool) {
-        throw new AgentError(`Unknown tool: ${toolCall.function.name}`);
-      }
-
+      // Try parsing as JSON and validating
       try {
-        const args = JSON.parse(toolCall.function.arguments);
-        const result = await tool.func(args);
-        return result as T;
+        const parsed = JSON.parse(content);
+        const result = this.resultType.safeParse(parsed);
+        
+        if (result.success) {
+          return result.data as T;
+        }
+        
+        // Create a validation error without logging
+        throw new AgentError(`Validation failed: ${JSON.stringify(result.error.issues)}`);
       } catch (error) {
-        if (tool.retries && tool.retries > 0) {
-          tool.retries--;
-          throw new ModelRetry("Tool retry");
+        if (error instanceof SyntaxError) {
+          throw new AgentError("Failed to parse response: Invalid JSON");
         }
         throw error;
       }
     }
 
-    // Handle regular response
-    let result = message.content as T;
-
-    // Run result validators
-    for (const validator of this.resultValidators) {
-      try {
-        result = await validator(result);
-      } catch (error) {
-        if (error instanceof ModelRetry) {
-          throw error; // Let run() method handle the retry
-        }
-        throw error;
-      }
-    }
-
-    return result;
+    // If no result type or all validation failed, return content as string
+    return content as T;
   }
 
   addResultValidator(validator: ResultValidator<T>): void {
@@ -401,7 +447,7 @@ export class Agent<T = string> {
   }
 
   registerTool(tool: Tool): void {
-    this.tools.set(tool.name, {
+    this.tools.push({
       ...tool,
       retries: tool.retries ?? this.defaultRetries,
     });
