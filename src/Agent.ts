@@ -129,23 +129,55 @@ export class Agent<T = string> {
                 tool.retries = this.defaultRetries;
             }
 
-            const response = await this.client.chat.completions.create({
-                model: options.model || this.model,
-                temperature: this.temperature,
-                messages: messages as any[],
-                functions: Array.from(this.tools.values()).map(tool => ({
-                    name: tool.name,
-                    description: tool.description,
-                    parameters: tool.parameters,
-                })),
-            });
-
-            const result = await this.handleResponse(response);
-            return {
-                messages,
-                data: result as T,
-                cost: this.cost.estimatedCost,
-            };
+            let lastError: Error | undefined;
+            for (let i = 0; i < this.defaultRetries; i++) {
+                try {
+                    const response = await this.client.chat.completions.create({
+                        model: options.model || this.model,
+                        temperature: this.temperature,
+                        messages: messages as any[],
+                        functions: Array.from(this.tools.values()).map(tool => ({
+                            name: tool.name,
+                            description: tool.description,
+                            parameters: tool.parameters,
+                        })),
+                        function_call: this.tools.size > 0 ? "auto" : undefined,
+                        response_format: { type: "text" }
+                    });
+                    console.log("OpenAI Response:", JSON.stringify(response, null, 2));
+                    console.log("OpenAI Response Type:", typeof response);
+                    console.log("OpenAI Response Keys:", Object.keys(response));
+                    if (response instanceof Response) {
+                        const json = await response.json();
+                        console.log("Parsed Response:", JSON.stringify(json, null, 2));
+                        const result = await this.handleResponse(json);
+                        return {
+                            messages,
+                            data: result as T,
+                            cost: this.cost.estimatedCost,
+                        };
+                    } else {
+                        const result = await this.handleResponse(response);
+                        return {
+                            messages,
+                            data: result as T,
+                            cost: this.cost.estimatedCost,
+                        };
+                    }
+                } catch (error: any) {
+                    console.error(`OpenAI API Error (attempt ${i + 1}/${this.defaultRetries}):`, error.response?.data || error.message);
+                    if (error.response?.data) {
+                        console.error("Full error response:", JSON.stringify(error.response.data, null, 2));
+                    }
+                    lastError = error;
+                    if (i < this.defaultRetries - 1) {
+                        await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1))); // Exponential backoff
+                        continue;
+                    }
+                    throw error;
+                }
+            }
+            throw lastError || new AgentError("Failed to chat with OpenAI after retries");
         } catch (error) {
             if (error instanceof ModelRetry && this.currentRetry < this.maxResultRetries) {
                 this.currentRetry++;
@@ -217,10 +249,14 @@ export class Agent<T = string> {
     }
 
     private async handleResponse(response: any): Promise<T> {
-        const message = response.choices[0]?.message;
-        
+        if (!response || !response.choices || !response.choices[0]) {
+            throw new AgentError("Invalid response from OpenAI: missing choices");
+        }
+
+        const choice = response.choices[0];
+        const message = choice.message;
         if (!message) {
-            throw new AgentError("No response from OpenAI");
+            throw new AgentError("Invalid response from OpenAI: missing message");
         }
 
         // Update cost tracking
