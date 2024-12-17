@@ -191,15 +191,17 @@ export class Agent<T = string> {
             model: options.model || this.model,
             temperature: this.temperature,
             messages: messages as any[],
-            tools: this.tools.map((tool) => ({
-              type: "function",
-              function: {
-                name: tool.name,
-                description: tool.description,
-                parameters: tool.parameters,
-              },
-            })),
-            tool_choice: this.tools.length > 0 ? "auto" : "none",
+            ...(this.tools.length > 0 && {
+              tools: this.tools.map((tool) => ({
+                type: "function",
+                function: {
+                  name: tool.name,
+                  description: tool.description,
+                  parameters: tool.parameters,
+                },
+              })),
+              tool_choice: "auto"
+            })
           });
 
           if (!response || Object.keys(response).length === 0) {
@@ -309,15 +311,17 @@ export class Agent<T = string> {
       temperature: this.temperature,
       messages: messages as any[],
       stream: true,
-      tools: this.tools.map((tool) => ({
-        type: "function",
-        function: {
-          name: tool.name,
-          description: tool.description,
-          parameters: tool.parameters,
-        },
-      })),
-      tool_choice: this.tools.length > 0 ? "auto" : "none",
+      ...(this.tools.length > 0 && {
+        tools: this.tools.map((tool) => ({
+          type: "function",
+          function: {
+            name: tool.name,
+            description: tool.description,
+            parameters: tool.parameters,
+          },
+        })),
+        tool_choice: "auto"
+      })
     });
 
     for await (const chunk of stream) {
