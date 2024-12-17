@@ -1,11 +1,14 @@
 import { expect, test, describe, beforeEach } from "bun:test";
 import { Agent } from "../src/agent";
 import { MockOpenAI } from "../src/mocks/openai";
+import { resetOpenAIClient } from "../src/lib/openai";
 
 describe("Agent", () => {
   beforeEach(() => {
     // Clear all mock responses before each test
     MockOpenAI.getInstance().clearMocks();
+    // Reset OpenAI client
+    resetOpenAIClient();
   });
 
   test("should make a simple chat completion call using mock", async () => {
