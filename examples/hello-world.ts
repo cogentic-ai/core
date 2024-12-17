@@ -11,7 +11,6 @@ async function main() {
   // Create an agent instance
   const agent = new Agent({
     model: "gpt-4o-mini",
-    apiKey,
   });
 
   try {

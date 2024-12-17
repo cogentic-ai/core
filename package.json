@@ -10,12 +10,13 @@
     "build": "bun build ./src/index.ts --outdir=./dist"
   },
   "devDependencies": {
+    "@types/node": "^22.10.2",
     "bun-types": "latest",
     "dotenv": "^16.4.7",
     "typescript": "^5.3.0"
   },
   "dependencies": {
-    "openai": "^4.24.1",
+    "openai": "^4.76.3",
     "zod": "^3.24.1"
   }
 }
