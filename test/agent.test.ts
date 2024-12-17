@@ -1,30 +1,35 @@
-import { expect, test, describe } from "bun:test";
+import { expect, test, describe, beforeEach } from "bun:test";
 import { Agent } from "../src/agent";
+import { MockOpenAI } from "../src/mocks/openai";
 
 describe("Agent", () => {
-  test("should make a simple chat completion call", async () => {
+  beforeEach(() => {
+    // Clear all mock responses before each test
+    MockOpenAI.getInstance().clearMocks();
+  });
+
+  test("should make a simple chat completion call using mock", async () => {
+    const mockPrompt = "Hello, who are you?";
+    const mockResponse = "Hello, I am an AI assistant.";
+    
+    // Set up mock response
+    MockOpenAI.getInstance().setMockResponse(mockPrompt, mockResponse);
+    
     const agent = new Agent({
-      model: "gpt-4",
+      model: "mock",
       apiKey: "test-key"
     });
 
-    const mockResponse = {
-      choices: [{
-        message: {
-          content: "Hello, I am an AI assistant."
-        }
-      }]
-    };
+    const result = await agent.run(mockPrompt);
+    expect(result).toBe(mockResponse);
+  });
 
-    // Mock the fetch function
-    global.fetch = async () => {
-      return {
-        ok: true,
-        json: async () => mockResponse
-      } as Response;
-    };
+  test("should throw error when no mock response is found", async () => {
+    const agent = new Agent({
+      model: "mock",
+      apiKey: "test-key"
+    });
 
-    const result = await agent.run("Hello, who are you?");
-    expect(result).toBe("Hello, I am an AI assistant.");
+    await expect(agent.run("unknown prompt")).rejects.toThrow("No mock response found for prompt: unknown prompt");
   });
 });
