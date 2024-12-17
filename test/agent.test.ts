@@ -26,22 +26,24 @@ describe("Agent", () => {
 
   describe("JSON Output", () => {
     test("should return structured JSON output when json option is enabled", async () => {
-      const mockResponse = {
-        content: "Hello, World!",
-        metadata: {
-          model: "mock",
-          timestamp: "2024-12-17T13:36:46-06:00"
-        }
-      };
+      const mockResponse = "Hello, World!";
       
       const agent = new Agent({
         model: "mock",
-        mockData: JSON.stringify(mockResponse),
+        mockData: mockResponse,
         json: true
       });
 
       const response = await agent.run("Say Hello");
-      expect(JSON.parse(response)).toEqual(mockResponse);
+      const parsedResponse = JSON.parse(response);
+      
+      expect(parsedResponse).toEqual({
+        content: "Hello, World!",
+        metadata: {
+          model: "mock",
+          timestamp: expect.any(String)
+        }
+      });
     });
   });
 });
