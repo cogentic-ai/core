@@ -23,4 +23,25 @@ describe("Agent", () => {
       await expect(agent.run("Hello")).rejects.toThrow();
     });
   });
+
+  describe("JSON Output", () => {
+    test("should return structured JSON output when json option is enabled", async () => {
+      const mockResponse = {
+        content: "Hello, World!",
+        metadata: {
+          model: "mock",
+          timestamp: "2024-12-17T13:36:46-06:00"
+        }
+      };
+      
+      const agent = new Agent({
+        model: "mock",
+        mockData: JSON.stringify(mockResponse),
+        json: true
+      });
+
+      const response = await agent.run("Say Hello");
+      expect(JSON.parse(response)).toEqual(mockResponse);
+    });
+  });
 });

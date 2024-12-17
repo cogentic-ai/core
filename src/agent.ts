@@ -5,6 +5,7 @@ interface AgentConfig {
   temperature?: number;
   maxTokens?: number;
   mockData?: string;
+  json?: boolean;
 }
 
 export class Agent {
@@ -37,7 +38,19 @@ export class Agent {
         ],
       });
 
-      return completion.choices[0]?.message?.content || "";
+      const content = completion.choices[0]?.message?.content || "";
+      
+      if (this.config.json) {
+        return JSON.stringify({
+          content,
+          metadata: {
+            model: this.config.model,
+            timestamp: new Date().toISOString()
+          }
+        });
+      }
+
+      return content;
     } catch (error) {
       throw new Error(`Agent execution failed: ${error.message}`);
     }
