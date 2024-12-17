@@ -140,6 +140,32 @@ try {
 }
 ```
 
+## Examples
+
+### Hello World Example
+
+The simplest way to get started is with our hello world example:
+
+```bash
+# Set your OpenAI API key
+export OPENAI_API_KEY='your-api-key-here'
+
+# Run the hello world example
+bun examples/hello-world.ts
+```
+
+This will demonstrate a basic interaction with the AI model. The example code can be found in `examples/hello-world.ts`.
+
+### Running Tests
+
+```bash
+# Run unit tests (uses mocked responses)
+bun test
+
+# Run integration tests (requires OPENAI_API_KEY)
+bun test test/integration --timeout 10000
+```
+
 ## Development
 
 1. Clone the repository
