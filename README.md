@@ -46,13 +46,78 @@ bun add cogentic-ai-typescript
 import { Agent } from 'cogentic-ai-typescript';
 
 const agent = new Agent({
-  model: 'gpt-4',
-  apiKey: 'your-api-key-here' // Optional if OPENAI_API_KEY is set
+  model: 'gpt-4o-mini',
+  systemPrompt: 'You are a helpful assistant',
 });
 
-const result = await agent.run('Hello, AI!');
-console.log(result.data);
-console.log('Cost:', result.cost);
+const response = await agent.run('Hello!');
+console.log(response); // "Hello! How can I help you today?"
+```
+
+### Schema Validation
+
+Use Zod schemas to ensure type-safe responses:
+
+```typescript
+import { z } from 'zod';
+import { Agent } from 'cogentic-ai-typescript';
+
+// Define your response schema
+const UserSchema = z.object({
+  name: z.string().describe("User's full name"),
+  age: z.number().min(0).max(120).describe("User's age in years"),
+  email: z.string().email().describe("User's email address"),
+});
+
+// Create an agent with schema validation
+const agent = new Agent({
+  model: 'gpt-4o-mini',
+  systemPrompt: 'You are a helpful assistant',
+  responseType: UserSchema,
+  debug: true, // Enable debug logging
+});
+
+// Get a type-safe response
+const user = await agent.run('Get info for John Doe');
+console.log(user.name);  // TypeScript knows this is a string
+console.log(user.age);   // TypeScript knows this is a number
+console.log(user.email); // TypeScript knows this is a string
+```
+
+The agent will:
+1. Automatically include schema information in the prompt
+2. Validate the LLM's response against your schema
+3. Provide proper TypeScript types for the response
+4. Log validation details when debug is enabled
+
+#### Debug Mode
+Enable detailed logging to see schema validation in action:
+
+```typescript
+const agent = new Agent({
+  model: 'gpt-4o-mini',
+  systemPrompt: 'You are a helpful assistant',
+  responseType: MySchema,
+  debug: true, // Shows schema and response details
+});
+```
+
+#### Schema Inspection
+Use the `zodToJson` utility to inspect schemas:
+
+```typescript
+import { zodToJson } from 'cogentic-ai-typescript';
+
+const schema = z.object({
+  name: z.string().describe('User name'),
+  age: z.number().min(0).describe('User age'),
+});
+
+console.log(zodToJson(schema));
+// {
+//   "name": { "type": "string", "description": "User name" },
+//   "age": { "type": "number", "description": "User age" }
+// }
 ```
 
 ### Structured Responses with Validation
