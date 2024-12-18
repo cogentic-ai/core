@@ -38,10 +38,11 @@ describe("Agent JSON Response", () => {
       model: "gpt-4o-mini",
       openaiClient: mockOpenAIClient,
       responseType: PersonSchema,
+      systemPrompt: "You are a helpful AI assistant.",
     });
 
     const response = await agent.run("Get person info");
-    
+
     // Test the behavior - we get back a properly typed response
     expect(response).toEqual(mockResponse);
     expect(PersonSchema.parse(response)).toBeDefined();
@@ -70,6 +71,7 @@ describe("Agent JSON Response", () => {
       model: "gpt-4o-mini",
       openaiClient: mockOpenAIClient,
       responseType: PersonSchema,
+      systemPrompt: "You are a helpful AI assistant.",
     });
 
     await expect(agent.run("Get person info")).rejects.toThrow();
