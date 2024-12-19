@@ -132,7 +132,7 @@ const CitySchema = z.object({
 });
 
 const agent = new Agent({
-  model: "gpt-4",
+  model: "gpt-4o-mini",
   responseSchema: CitySchema,
 });
 
@@ -167,7 +167,7 @@ const calculator: Tool = {
 };
 
 const agent = new Agent({
-  model: "gpt-4",
+  model: "gpt-4o-mini",
   tools: [calculator],
 });
 
@@ -179,7 +179,7 @@ console.log(result.data); // Output: 8
 
 ```typescript
 const agent = new Agent({
-  model: "gpt-4",
+  model: "gpt-4o-mini",
 });
 
 agent.addResultValidator((result) => {
