@@ -1,32 +1,35 @@
 import { openai as defaultOpenAI } from "./lib/openai";
 import type OpenAI from "openai";
 import { z } from "zod";
-import { zodToJson } from "./lib/zodUtils";
+import {
+  Tool,
+  convertToolsToOpenAIFormat,
+  executeToolCall,
+  createToolsSystemPrompt,
+} from "./lib/tools";
+import { Message, Memory } from "./lib/memory";
+import { validateAndFormatJSON, safeJSONParse, zodToJson } from "./lib/utils";
 
-export type Message = {
-  role: "user" | "assistant" | "system";
-  content: string;
-};
-
-interface AgentConfig<T extends z.ZodType> {
+interface AgentConfig<TResponse> {
   model: string;
   systemPrompt: string;
   temperature?: number;
   maxTokens?: number;
   mockData?: string;
   openaiClient?: OpenAI;
-  responseType?: T;
+  responseSchema?: z.ZodType<TResponse>;
   debug?: boolean;
   maxMemoryMessages?: number;
   keepSystemPrompt?: boolean;
+  tools?: Tool[];
 }
 
-export class Agent<T extends z.ZodType> {
-  private config: AgentConfig<T>;
+export class Agent<TResponse = string> {
+  private config: AgentConfig<TResponse>;
   private openaiClient: OpenAI;
-  private memoryMessages: Message[] = [];
+  private memory: Memory;
 
-  constructor(config: AgentConfig<T>) {
+  constructor(config: AgentConfig<TResponse>) {
     this.config = {
       temperature: 0.7,
       maxTokens: 1000,
@@ -34,120 +37,98 @@ export class Agent<T extends z.ZodType> {
       keepSystemPrompt: true,
       ...config,
     };
-    
+
     // Use provided client or default
     this.openaiClient = config.openaiClient || defaultOpenAI;
-  }
 
-  private validateAndFormatJSON(content: string): string {
-    try {
-      JSON.parse(content);
-      return content;
-    } catch {
-      return JSON.stringify({ value: content });
-    }
-  }
+    // Initialize memory
+    this.memory = new Memory(
+      this.config.maxMemoryMessages,
+      this.config.keepSystemPrompt
+    );
 
-  private validateMessage(message: Message): Message {
-    if (
-      !message.role ||
-      !["user", "assistant", "system"].includes(message.role)
-    ) {
-      throw new Error(`Invalid message role: ${message.role}`);
-    }
-    if (typeof message.content !== "string") {
-      throw new Error("Message content must be a string");
-    }
-    return message;
-  }
-
-  private truncateMemory() {
-    if (this.memoryMessages.length > this.config.maxMemoryMessages!) {
-      const systemMessages = this.config.keepSystemPrompt
-        ? this.memoryMessages.filter((m) => m.role === "system")
-        : [];
-      const nonSystemMessages = this.memoryMessages
-        .filter((m) => m.role !== "system")
-        .slice(-this.config.maxMemoryMessages!);
-      this.memoryMessages = [...systemMessages, ...nonSystemMessages];
-    }
+    // Add system prompt to memory
+    this.memory.add({
+      role: "system",
+      content: this.config.systemPrompt,
+    });
   }
 
   // Helper method to add messages to memory
   addToMemory(...messages: Message[]) {
-    messages.forEach((msg) => {
-      this.memoryMessages.push(this.validateMessage(msg));
-    });
-    this.truncateMemory();
+    this.memory.add(...messages);
   }
 
   // Helper method to clear memory
   clearMemory(keepSystemPrompt = this.config.keepSystemPrompt) {
-    if (keepSystemPrompt) {
-      this.memoryMessages = this.memoryMessages.filter(
-        (m) => m.role === "system"
-      );
-    } else {
-      this.memoryMessages = [];
-    }
+    this.memory.clear(keepSystemPrompt);
   }
 
   // Get current memory state
   getMemory(): Message[] {
-    return [...this.memoryMessages];
+    return this.memory.getAll();
   }
 
   async run(
     prompt: string,
     options: { messages?: Message[] } = {}
-  ): Promise<T extends z.ZodType ? z.infer<T> : string> {
+  ): Promise<TResponse> {
     let content: string;
-    const response_format = this.config.responseType ? "json_object" : "text";
+    const response_format = this.config.responseSchema ? "json_object" : "text";
 
     // If using mock model, return mockData
     if (this.config.model === "mock") {
       content =
         this.config.mockData ?? "This is a mock response. I am not a real LLM.";
-      if (this.config.responseType) {
-        content = this.validateAndFormatJSON(content);
+      if (this.config.responseSchema) {
+        content = validateAndFormatJSON(content);
+      }
+
+      // Handle tool calls in mock data
+      const mockData = safeJSONParse(content);
+      if (mockData?.tool_calls) {
+        for (const toolCall of mockData.tool_calls) {
+          if (toolCall.type === "function" && this.config.tools) {
+            return executeToolCall(this.config.tools, toolCall);
+          }
+        }
       }
     } else {
       try {
-        const messages: Message[] = [
-          {
-            role: "system",
-            content: this.config.systemPrompt,
-          },
-        ];
+        const messages: Message[] = [];
 
-        // Add schema info to system prompt if using responseType
-        if (this.config.responseType) {
-          const schemaMessage = {
+        // Add schema info to system prompt if using responseSchema
+        if (this.config.responseSchema) {
+          messages.push({
             role: "system",
             content: `Your response must use JSON and match this Zod schema, but use normal JSON instead of Zod format:\n${JSON.stringify(
-              zodToJson(this.config.responseType),
+              zodToJson(this.config.responseSchema),
               null,
               2
             )}`,
-          };
-          messages.push(schemaMessage);
+          });
+        }
+
+        // Add available tools to the system prompt
+        if (this.config.tools?.length) {
+          messages.push({
+            role: "system",
+            content: createToolsSystemPrompt(this.config.tools),
+          });
         }
 
         // Add message history if provided
         if (options.messages) {
-          options.messages.forEach((msg) => this.validateMessage(msg));
           messages.push(...options.messages);
         }
 
-        // Add internal memory if available
-        if (this.memoryMessages.length > 0) {
-          messages.push(...this.memoryMessages);
-        }
+        // Add memory messages
+        messages.push(...this.memory.getAll());
 
-        const userMessage = this.validateMessage({
-          role: "user",
+        const userMessage = {
+          role: "user" as const,
           content: prompt,
-        });
+        };
         messages.push(userMessage);
 
         const completion = await this.openaiClient.chat.completions.create({
@@ -156,9 +137,23 @@ export class Agent<T extends z.ZodType> {
           max_tokens: this.config.maxTokens,
           messages,
           response_format: { type: response_format },
+          tools: this.config.tools
+            ? convertToolsToOpenAIFormat(this.config.tools)
+            : undefined,
         });
 
         content = completion.choices[0]?.message?.content || "";
+        const toolCalls = completion.choices[0]?.message?.tool_calls;
+
+        // Handle tool calls
+        if (toolCalls?.length && this.config.tools) {
+          for (const toolCall of toolCalls) {
+            if (toolCall.type === "function") {
+              return executeToolCall(this.config.tools, toolCall);
+            }
+          }
+        }
+
         this.addToMemory(userMessage, { role: "assistant", content });
       } catch (error) {
         console.error("OpenAI API Error:", error);
@@ -166,27 +161,25 @@ export class Agent<T extends z.ZodType> {
       }
     }
 
-    // If responseType is provided, validate and parse the response
-    if (this.config.responseType) {
+    // If responseSchema is provided, validate and parse the response
+    if (this.config.responseSchema) {
       if (this.config.debug) {
-        const responseJson = zodToJson(this.config.responseType);
+        const responseJson = zodToJson(this.config.responseSchema);
         console.log("Expected Schema:", JSON.stringify(responseJson));
         console.log("Response:", content);
       }
 
-      const parsedContent = JSON.parse(content);
-      const parsedResponse = this.config.responseType.safeParse(parsedContent);
-      console.log("Response:", parsedResponse);
+      const parsedContent = safeJSONParse(content);
+      const parsedResponse = this.config.responseSchema.safeParse(parsedContent);
 
       if (!parsedResponse.success) {
-        // TODO: instead of throwing an error, we should force the validation using an LLM
         console.error("Response does not match schema:", parsedResponse.error);
         throw new Error("Response does not match schema");
       }
 
-      return this.config.responseType.parse(parsedContent);
+      return this.config.responseSchema.parse(parsedContent);
     }
 
-    return content;
+    return content as TResponse;
   }
 }
