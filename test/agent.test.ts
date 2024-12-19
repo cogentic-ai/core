@@ -80,11 +80,11 @@ describe("Agent", () => {
         age: z.number(),
       });
 
-      const agent = new Agent({
+      const agent = new Agent<z.infer<typeof UserSchema>>({
         model: "gpt-4o-mini",
         systemPrompt: "You are a helpful AI assistant.",
         openaiClient: mockOpenAIClient,
-        responseType: UserSchema,
+        responseSchema: UserSchema,
       });
 
       const response = await agent.run("Get user info");
