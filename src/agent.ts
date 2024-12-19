@@ -4,6 +4,11 @@ import { z } from "zod";
 import { zodToJson } from "./lib/zodUtils";
 import { log } from "console";
 
+export type Message = {
+  role: "user" | "assistant" | "system";
+  content: string;
+};
+
 interface AgentConfig<T extends z.ZodType> {
   model: string;
   systemPrompt: string;
@@ -13,6 +18,10 @@ interface AgentConfig<T extends z.ZodType> {
   openaiClient?: OpenAI;
   responseType?: T;
   debug?: boolean;
+}
+
+interface RunOptions {
+  messages?: Array<{ role: "user" | "assistant" | "system"; content: string }>;
 }
 
 export class Agent<T extends z.ZodType> {
@@ -38,7 +47,8 @@ export class Agent<T extends z.ZodType> {
   }
 
   async run(
-    prompt: string
+    prompt: string,
+    options: RunOptions = {}
   ): Promise<T extends z.ZodType ? z.infer<T> : string> {
     let content: string;
     const response_format = this.config.responseType ? "json_object" : "text";
@@ -52,7 +62,7 @@ export class Agent<T extends z.ZodType> {
       }
     } else {
       try {
-        const messages = [
+        const messages: Message[] = [
           {
             role: "system" as const,
             content: this.config.systemPrompt,
@@ -70,6 +80,11 @@ export class Agent<T extends z.ZodType> {
             )}`,
           };
           messages.push(schemaMessage);
+        }
+
+        // Add message history if provided
+        if (options.messages) {
+          messages.push(...options.messages);
         }
 
         messages.push({ role: "user" as const, content: prompt });

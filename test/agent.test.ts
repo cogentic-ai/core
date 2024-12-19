@@ -112,4 +112,50 @@ describe("Agent", () => {
       expect(typeof response).toBe("string");
     });
   });
+
+  describe("Memory Management", () => {
+    test("should maintain conversation history", async () => {
+      const mockResponse1 = "Hello! How can I help you today?";
+      const mockResponse2 = "In our previous conversation, you said 'Hello'";
+
+      const mockOpenAIClient = {
+        chat: {
+          completions: {
+            create: mock((params) => {
+              const response = params.messages[
+                params.messages.length - 1
+              ].content.includes("last time")
+                ? mockResponse2
+                : mockResponse1;
+
+              return Promise.resolve({
+                choices: [{ message: { content: response } }],
+              });
+            }),
+          },
+        },
+      };
+
+      const agent = new Agent({
+        model: "gpt-4o-mini",
+        systemPrompt: "You are a helpful AI assistant.",
+        openaiClient: mockOpenAIClient,
+      });
+
+      const messages = [{ role: "user", content: "Hello!" }];
+
+      const response1 = await agent.run("Hello!", { messages });
+      expect(response1).toBe(mockResponse1);
+
+      messages.push(
+        { role: "assistant", content: mockResponse1 },
+        { role: "user", content: "What did you say last time?" }
+      );
+
+      const response2 = await agent.run("What did you say last time?", {
+        messages,
+      });
+      expect(response2).toBe(mockResponse2);
+    });
+  });
 });
