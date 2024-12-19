@@ -70,7 +70,7 @@ const UserSchema = z.object({
 const agent = new Agent({
   model: "gpt-4o-mini",
   systemPrompt: "You are a helpful assistant",
-  responseType: UserSchema,
+  responseSchema: UserSchema,
   debug: true, // Enable debug logging
 });
 
@@ -96,7 +96,7 @@ Enable detailed logging to see schema validation in action:
 const agent = new Agent({
   model: "gpt-4o-mini",
   systemPrompt: "You are a helpful assistant",
-  responseType: MySchema,
+  responseSchema: MySchema,
   debug: true, // Shows schema and response details
 });
 ```
@@ -133,11 +133,11 @@ const CitySchema = z.object({
 
 const agent = new Agent({
   model: "gpt-4",
-  resultType: CitySchema,
+  responseSchema: CitySchema,
 });
 
 const result = await agent.run("Tell me about London");
-console.log(result.data);
+console.log(result);
 // Output: { city: 'London', country: 'UK', population: 8900000 }
 ```
 
