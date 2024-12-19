@@ -11,7 +11,7 @@ const SupportResult = z.object({
 // Create an agent with the response type
 const supportAgent = new Agent({
   model: "gpt-4o-mini",
-  responseType: SupportResult,
+  responseSchema: SupportResult,
   systemPrompt:
     "You are a support agent in our bank. Help customers with their queries and assess risk levels.",
 });
