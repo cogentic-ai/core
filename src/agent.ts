@@ -17,12 +17,8 @@ interface AgentConfig<T extends z.ZodType> {
   openaiClient?: OpenAI;
   responseType?: T;
   debug?: boolean;
-  maxMemoryMessages?: number; // Maximum number of messages to keep in memory
-  keepSystemPrompt?: boolean; // Whether to keep system prompt in memory
-}
-
-interface RunOptions {
-  messages?: Message[];
+  maxMemoryMessages?: number;
+  keepSystemPrompt?: boolean;
 }
 
 export class Agent<T extends z.ZodType> {
@@ -38,6 +34,8 @@ export class Agent<T extends z.ZodType> {
       keepSystemPrompt: true,
       ...config,
     };
+    
+    // Use provided client or default
     this.openaiClient = config.openaiClient || defaultOpenAI;
   }
 
@@ -101,7 +99,7 @@ export class Agent<T extends z.ZodType> {
 
   async run(
     prompt: string,
-    options: RunOptions = {}
+    options: { messages?: Message[] } = {}
   ): Promise<T extends z.ZodType ? z.infer<T> : string> {
     let content: string;
     const response_format = this.config.responseType ? "json_object" : "text";
