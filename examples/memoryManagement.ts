@@ -11,37 +11,46 @@ async function main() {
   const messages: Message[] = [];
 
   // First interaction
-  console.log("\nUser: Let's talk about your favorite color.");
-  const response1 = await agent.run("Let's talk about your favorite color.", {
+  const message1: Message = {
+    role: "user",
+    content: "Let's talk about your favorite color.",
+  };
+  const response1 = await agent.run(message1.content, {
     messages,
   });
-  console.log("Assistant:", response1);
 
-  // Update conversation history
-  messages.push(
-    { role: "user", content: "Let's talk about your favorite color." },
-    { role: "assistant", content: response1 }
-  );
+  messages.push(message1);
+  messages.push({ role: "assistant", content: response1 });
+
+  console.log(messages);
 
   // Second interaction
-  console.log("\nUser: Why did you choose that color?");
-  const response2 = await agent.run("Why did you choose that color?", {
+  const message2: Message = {
+    role: "user",
+    content: "Why did you choose that color?",
+  };
+  const response2 = await agent.run(message2.content, {
     messages,
   });
-  console.log("Assistant:", response2);
 
-  messages.push(
-    { role: "user", content: "Why did you choose that color?" },
-    { role: "assistant", content: response2 }
-  );
+  messages.push(message2);
+  messages.push({ role: "assistant", content: response2 });
+
+  console.log(messages);
 
   // Third interaction - testing long-term memory
-  console.log("\nUser: Can you remind me what we've been discussing?");
-  const response3 = await agent.run(
-    "Can you remind me what we've been discussing?",
-    { messages }
-  );
-  console.log("Assistant:", response3);
+  const message3: Message = {
+    role: "user",
+    content: "Can you remind me what we've been discussing?",
+  };
+  const response3 = await agent.run(message3.content, {
+    messages,
+  });
+
+  messages.push(message3);
+  messages.push({ role: "assistant", content: response3 });
+
+  console.log(messages);
 }
 
 main().catch(console.error);
