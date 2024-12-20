@@ -1,7 +1,7 @@
 // Core exports
 export { Agent } from "./agent";
 export type { Message } from "./lib/memory";
-export type { Tool } from "./lib/tools";
+export type { Tool, createToolsSystemPrompt } from "./lib/tools";
 
 // Utility exports
 export { zodToJson } from "./lib/utils";
