@@ -33,6 +33,8 @@ export function zodToJson(schema: z.ZodType): object {
     return { type: "object", properties: {} };
   }
 
+  console.log("Schema:", schema);
+
   // Handle object schemas
   if (schema instanceof z.ZodObject) {
     const properties = Object.fromEntries(
