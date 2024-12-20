@@ -1,8 +1,16 @@
 export interface Message {
-  role: "user" | "assistant" | "system" | "function";
-  content: string;
-  tool_call_id?: string;
+  role: "system" | "user" | "assistant" | "tool";
+  content: string | null;
   name?: string;
+  tool_calls?: {
+    id: string;
+    type: "function";
+    function: {
+      name: string;
+      arguments: string;
+    };
+  }[];
+  tool_call_id?: string;
 }
 
 export class Memory {
@@ -18,12 +26,12 @@ export class Memory {
   private validateMessage(message: Message): Message {
     if (
       !message.role ||
-      !["user", "assistant", "system", "function"].includes(message.role)
+      !["system", "user", "assistant", "tool"].includes(message.role)
     ) {
       throw new Error(`Invalid message role: ${message.role}`);
     }
-    if (typeof message.content !== "string") {
-      throw new Error("Message content must be a string");
+    if (message.content !== null && typeof message.content !== "string") {
+      throw new Error("Message content must be a string or null");
     }
     return message;
   }

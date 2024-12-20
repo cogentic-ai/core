@@ -90,12 +90,10 @@ export class Agent<TResponse = string> {
 
       const completion = await this.openaiClient.chat.completions.create({
         model: this.config.model,
-        messages,
-        temperature: options.temperature ?? this.config.temperature ?? 0.7,
+        messages: messages as any, // TODO: Fix type casting
+        tools: this.config.tools ? convertToolsToOpenAIFormat(this.config.tools) : undefined,
+        temperature: options.temperature ?? this.config.temperature,
         max_tokens: options.maxTokens ?? this.config.maxTokens,
-        tools: this.config.tools
-          ? convertToolsToOpenAIFormat(this.config.tools)
-          : undefined,
       });
       console.log(`Completion: ${JSON.stringify(completion)} `);
 

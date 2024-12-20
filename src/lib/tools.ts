@@ -6,7 +6,7 @@ import { zodToJson } from "./utils";
 export interface Tool {
   name: string;
   description: string;
-  parameters: z.ZodObject<any>;
+  parameters: z.ZodType<any>;
   function: (args: any) => Promise<any>;
 }
 
@@ -23,11 +23,15 @@ export function convertToolsToOpenAIFormat(
   tools: Tool[]
 ): ChatCompletionTool[] {
   return tools.map((tool) => ({
-    type: "function",
+    type: "function" as const,
     function: {
       name: tool.name,
       description: tool.description,
-      parameters: zodToJson(tool.parameters) as any,
+      parameters: zodToJson(tool.parameters) as {
+        type: "object";
+        properties: Record<string, unknown>;
+        required?: string[];
+      },
     },
   }));
 }
@@ -40,7 +44,7 @@ export async function executeToolCall(tools: Tool[], toolCall: ToolCall) {
   }
 
   const args = JSON.parse(toolCall.function.arguments);
-  return tool.handler(args);
+  return tool.function(args);
 }
 
 export function createToolsSystemPrompt(tools: Tool[]): string {
