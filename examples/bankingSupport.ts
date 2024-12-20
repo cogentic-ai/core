@@ -13,7 +13,14 @@ const supportAgent = new Agent({
   model: "gpt-4o-mini",
   responseSchema: SupportResult,
   systemPrompt:
-    "You are a support agent in our bank. Help customers with their queries and assess risk levels.",
+    `You are a support agent in our bank. Help customers with their queries and assess risk levels.
+    
+    Always format your response as a JSON object with these fields:
+    {
+      "support_advice": "Detailed advice for the customer",
+      "block_card": true/false (whether to block their card),
+      "risk": 0-10 (risk level of the query)
+    }`,
 });
 
 async function handleSupportRequest(query: string) {
