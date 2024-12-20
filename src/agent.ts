@@ -104,7 +104,7 @@ export class Agent<TResponse = string> {
       if (response.message.tool_calls && response.message.tool_calls.length > 0) {
         const toolCall = response.message.tool_calls[0];
         const tool = this.config.tools?.find(
-          (t) => t.definition.function.name === toolCall.function.name
+          (t) => t.name === toolCall.function.name
         );
 
         if (!tool) {
@@ -113,10 +113,10 @@ export class Agent<TResponse = string> {
 
         try {
           const args = JSON.parse(toolCall.function.arguments);
-          const result = await tool.execute(args);
+          const result = await tool.handler(args);
 
           messages.push({
-            role: "tool",
+            role: "assistant",
             content: JSON.stringify(result),
             tool_call_id: toolCall.id,
           });
@@ -136,14 +136,14 @@ export class Agent<TResponse = string> {
 
       const parsedContent = safeJSONParse(content);
       const parsedResponse =
-        this.config.responseSchema?.safeParse(parsedContent);
+        this.config.responseSchema.safeParse(parsedContent);
 
-      if (!parsedResponse?.success) {
-        console.error("Response does not match schema:", parsedResponse?.error);
+      if (!parsedResponse.success) {
+        console.error("Response does not match schema:", parsedResponse.error);
         throw new Error("Response validation failed");
       }
 
-      return parsedResponse?.data;
+      return parsedResponse.data;
     }
   }
 }
