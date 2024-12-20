@@ -25,27 +25,71 @@ export function safeJSONParse(content: string): any | undefined {
 }
 
 /**
- * Convert a Zod schema into a plain JSON object showing its shape
+ * Convert a Zod schema to a JSON Schema object
  */
 export function zodToJson(schema: z.ZodType): object {
   if (!schema) return {};
 
   // Handle object schemas
   if (schema instanceof z.ZodObject) {
-    return Object.fromEntries(
-      Object.entries(schema.shape).map(([key, field]) => [
-        key,
-        {
-          type: (field as any)._def.typeName,
-          description: (field as any).description,
-        },
-      ])
-    );
+    return {
+      type: "object",
+      properties: Object.fromEntries(
+        Object.entries(schema.shape).map(([key, value]) => [
+          key,
+          zodToJson(value as z.ZodType),
+        ])
+      ),
+      required: Object.keys(schema.shape),
+    };
   }
 
-  // Handle single field schemas
-  return {
-    type: (schema as any)._def.typeName,
-    description: (schema as any).description,
-  };
+  // Handle string schema
+  if (schema instanceof z.ZodString) {
+    return { type: "string" };
+  }
+
+  // Handle number schema
+  if (schema instanceof z.ZodNumber) {
+    return { type: "number" };
+  }
+
+  // Handle boolean schema
+  if (schema instanceof z.ZodBoolean) {
+    return { type: "boolean" };
+  }
+
+  // Handle array schema
+  if (schema instanceof z.ZodArray) {
+    return {
+      type: "array",
+      items: zodToJson(schema.element),
+    };
+  }
+
+  // Handle enum schema
+  if (schema instanceof z.ZodEnum) {
+    return {
+      type: "string",
+      enum: schema._def.values,
+    };
+  }
+
+  // Handle literal schema
+  if (schema instanceof z.ZodLiteral) {
+    return {
+      type: typeof schema._def.value,
+      enum: [schema._def.value],
+    };
+  }
+
+  // Handle union schema
+  if (schema instanceof z.ZodUnion) {
+    return {
+      oneOf: schema._def.options.map((option: z.ZodType) => zodToJson(option)),
+    };
+  }
+
+  // Default to any type if schema type is not recognized
+  return { type: "any" };
 }

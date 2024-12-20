@@ -1,7 +1,8 @@
 export interface Message {
-  role: "user" | "assistant" | "system";
+  role: "user" | "assistant" | "system" | "function";
   content: string;
   tool_call_id?: string;
+  name?: string;
 }
 
 export class Memory {
@@ -17,7 +18,7 @@ export class Memory {
   private validateMessage(message: Message): Message {
     if (
       !message.role ||
-      !["user", "assistant", "system"].includes(message.role)
+      !["user", "assistant", "system", "function"].includes(message.role)
     ) {
       throw new Error(`Invalid message role: ${message.role}`);
     }
@@ -48,9 +49,7 @@ export class Memory {
 
   clear(keepSystemPrompt = this.keepSystemPrompt): void {
     if (keepSystemPrompt) {
-      this.messages = this.messages.filter(
-        (m) => m.role === "system"
-      );
+      this.messages = this.messages.filter((m) => m.role === "system");
     } else {
       this.messages = [];
     }
@@ -61,10 +60,10 @@ export class Memory {
   }
 
   getSystemMessages(): Message[] {
-    return this.messages.filter(m => m.role === "system");
+    return this.messages.filter((m) => m.role === "system");
   }
 
   getNonSystemMessages(): Message[] {
-    return this.messages.filter(m => m.role !== "system");
+    return this.messages.filter((m) => m.role !== "system");
   }
 }
