@@ -1,14 +1,11 @@
 import type OpenAI from "openai";
+import { z } from "zod";
 
 export interface Tool {
   name: string;
   description: string;
-  function: (...args: any[]) => any;
-  parameters: {
-    type: "object";
-    properties: Record<string, any>;
-    required?: string[];
-  };
+  parameters: z.ZodObject<any>;
+  handler: (args: any) => Promise<any>;
 }
 
 export interface ToolCall {
@@ -37,7 +34,7 @@ export function executeToolCall(tools: Tool[], toolCall: ToolCall): any {
   }
   
   const args = JSON.parse(toolCall.function.arguments);
-  return tool.function(...Object.values(args));
+  return tool.handler(args);
 }
 
 export function createToolsSystemPrompt(tools: Tool[]): string {

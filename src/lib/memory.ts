@@ -1,6 +1,7 @@
 export interface Message {
   role: "user" | "assistant" | "system";
   content: string;
+  tool_call_id?: string;
 }
 
 export class Memory {

@@ -134,16 +134,21 @@ export class Agent<TResponse = string> {
         throw new Error("No content in response");
       }
 
-      const parsedContent = safeJSONParse(content);
-      const parsedResponse =
-        this.config.responseSchema.safeParse(parsedContent);
+      // If we have a response schema, validate and parse the response
+      if (this.config.responseSchema) {
+        const parsedContent = safeJSONParse(content);
+        const parsedResponse = this.config.responseSchema.safeParse(parsedContent);
 
-      if (!parsedResponse.success) {
-        console.error("Response does not match schema:", parsedResponse.error);
-        throw new Error("Response validation failed");
+        if (!parsedResponse.success) {
+          console.error("Response does not match schema:", parsedResponse.error);
+          throw new Error("Response validation failed");
+        }
+
+        return parsedResponse.data;
       }
 
-      return parsedResponse.data;
+      // If no response schema, return the content directly
+      return content as TResponse;
     }
   }
 }
