@@ -42,7 +42,10 @@ export function zodToJson(schema: z.ZodType): object {
       type: "object",
       properties,
       required: Object.keys(schema.shape).filter(
-        (k) => !(schema.shape[k] as z.ZodType)._def.isOptional
+        (k) => {
+          const field = schema.shape[k] as z.ZodType;
+          return !(field instanceof z.ZodOptional);
+        }
       ),
     };
   }
