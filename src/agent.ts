@@ -10,7 +10,7 @@ import {
 import { Message, Memory } from "./lib/memory";
 import { validateAndFormatJSON, safeJSONParse, zodToJson } from "./lib/utils";
 
-interface AgentConfig<TResponse> {
+export interface AgentConfig<TResponse> {
   model: string;
   systemPrompt: string;
   temperature?: number;
@@ -170,7 +170,8 @@ export class Agent<TResponse = string> {
       }
 
       const parsedContent = safeJSONParse(content);
-      const parsedResponse = this.config.responseSchema.safeParse(parsedContent);
+      const parsedResponse =
+        this.config.responseSchema.safeParse(parsedContent);
 
       if (!parsedResponse.success) {
         console.error("Response does not match schema:", parsedResponse.error);
