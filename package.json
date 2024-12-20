@@ -1,6 +1,6 @@
 {
   "name": "@cogentic/core",
-  "version": "0.3.9",
+  "version": "0.3.10",
   "description": "TypeScript first Agent framework, providing type-safe interactions with models and runtime validation.",
   "type": "module",
   "main": "dist/index.js",
