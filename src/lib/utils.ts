@@ -25,71 +25,63 @@ export function safeJSONParse(content: string): any | undefined {
 }
 
 /**
- * Convert a Zod schema to a JSON Schema object
+ * Convert a Zod schema into an OpenAI-compatible JSON Schema object
  */
 export function zodToJson(schema: z.ZodType): object {
-  if (!schema) return {};
+  if (!schema) return { type: "object", properties: {} };
 
   // Handle object schemas
   if (schema instanceof z.ZodObject) {
+    const properties = Object.fromEntries(
+      Object.entries(schema.shape).map(([key, field]) => [
+        key,
+        zodTypeToJsonSchema(field),
+      ])
+    );
     return {
       type: "object",
-      properties: Object.fromEntries(
-        Object.entries(schema.shape).map(([key, value]) => [
-          key,
-          zodToJson(value as z.ZodType),
-        ])
+      properties,
+      required: Object.keys(schema.shape).filter(
+        (k) => !(schema.shape[k] as any)._def.isOptional
       ),
-      required: Object.keys(schema.shape),
     };
   }
 
-  // Handle string schema
-  if (schema instanceof z.ZodString) {
-    return { type: "string" };
-  }
+  return zodTypeToJsonSchema(schema);
+}
 
-  // Handle number schema
-  if (schema instanceof z.ZodNumber) {
-    return { type: "number" };
-  }
+function zodTypeToJsonSchema(schema: z.ZodType): object {
+  if (!schema) return { type: "null" };
 
-  // Handle boolean schema
-  if (schema instanceof z.ZodBoolean) {
-    return { type: "boolean" };
-  }
+  const def = (schema as any)._def;
 
-  // Handle array schema
-  if (schema instanceof z.ZodArray) {
-    return {
-      type: "array",
-      items: zodToJson(schema.element),
-    };
+  switch (def.typeName) {
+    case "ZodString":
+      return { type: "string", description: schema.description };
+    case "ZodNumber":
+      return { type: "number", description: schema.description };
+    case "ZodBoolean":
+      return { type: "boolean", description: schema.description };
+    case "ZodArray":
+      return {
+        type: "array",
+        items: zodTypeToJsonSchema(def.type),
+        description: schema.description,
+      };
+    case "ZodEnum":
+      return {
+        type: "string",
+        enum: def.values,
+        description: schema.description,
+      };
+    case "ZodUnion":
+      return {
+        oneOf: def.options.map(zodTypeToJsonSchema),
+        description: schema.description,
+      };
+    case "ZodOptional":
+      return zodTypeToJsonSchema(def.innerType);
+    default:
+      return { type: "object", description: schema.description };
   }
-
-  // Handle enum schema
-  if (schema instanceof z.ZodEnum) {
-    return {
-      type: "string",
-      enum: schema._def.values,
-    };
-  }
-
-  // Handle literal schema
-  if (schema instanceof z.ZodLiteral) {
-    return {
-      type: typeof schema._def.value,
-      enum: [schema._def.value],
-    };
-  }
-
-  // Handle union schema
-  if (schema instanceof z.ZodUnion) {
-    return {
-      oneOf: schema._def.options.map((option: z.ZodType) => zodToJson(option)),
-    };
-  }
-
-  // Default to any type if schema type is not recognized
-  return { type: "any" };
 }
