@@ -71,116 +71,79 @@ export class Agent<TResponse = string> {
 
   async run(
     prompt: string,
-    options: { messages?: Message[] } = {}
+    options: {
+      messageHistory?: Message[];
+      temperature?: number;
+      maxTokens?: number;
+    } = {}
   ): Promise<TResponse> {
-    let content: string;
-    const response_format = this.config.responseSchema ? "json_object" : "text";
+    const messages: Message[] = [
+      { role: "system", content: this.config.systemPrompt },
+      ...(options.messageHistory || []),
+      { role: "user", content: prompt },
+    ];
 
-    // If using mock model, return mockData
-    if (this.config.model === "mock") {
-      content =
-        this.config.mockData ?? "This is a mock response. I am not a real LLM.";
-      if (this.config.responseSchema) {
-        content = validateAndFormatJSON(content);
-      }
+    while (true) {
+      const completion = await this.openaiClient.chat.completions.create({
+        model: this.config.model,
+        messages,
+        temperature: options.temperature ?? this.config.temperature ?? 0.7,
+        max_tokens: options.maxTokens ?? this.config.maxTokens,
+        tools: this.config.tools
+          ? convertToolsToOpenAIFormat(this.config.tools)
+          : undefined,
+      });
 
-      // Handle tool calls in mock data
-      const mockData = safeJSONParse(content);
-      if (mockData?.tool_calls) {
-        for (const toolCall of mockData.tool_calls) {
-          if (toolCall.type === "function" && this.config.tools) {
-            return executeToolCall(this.config.tools, toolCall);
-          }
+      const response = completion.choices[0];
+      messages.push({
+        role: response.message.role,
+        content: response.message.content || "",
+      });
+
+      // If there's a tool call, execute it and continue the conversation
+      if (response.message.tool_calls && response.message.tool_calls.length > 0) {
+        const toolCall = response.message.tool_calls[0];
+        const tool = this.config.tools?.find(
+          (t) => t.definition.function.name === toolCall.function.name
+        );
+
+        if (!tool) {
+          throw new Error(`Tool ${toolCall.function.name} not found`);
         }
-      }
-    } else {
-      try {
-        const messages: Message[] = [];
 
-        // Add schema info to system prompt if using responseSchema
-        if (this.config.responseSchema) {
+        try {
+          const args = JSON.parse(toolCall.function.arguments);
+          const result = await tool.execute(args);
+
           messages.push({
-            role: "system",
-            content: `Your response must use JSON and match this Zod schema, but use normal JSON instead of Zod format:\n${JSON.stringify(
-              zodToJson(this.config.responseSchema),
-              null,
-              2
-            )}`,
+            role: "tool",
+            content: JSON.stringify(result),
+            tool_call_id: toolCall.id,
           });
+
+          // Continue the conversation
+          continue;
+        } catch (error) {
+          throw new Error(`Failed to execute tool ${toolCall.function.name}: ${error}`);
         }
-
-        // Add available tools to the system prompt
-        if (this.config.tools?.length) {
-          messages.push({
-            role: "system",
-            content: createToolsSystemPrompt(this.config.tools),
-          });
-        }
-
-        // Add message history if provided
-        if (options.messages) {
-          messages.push(...options.messages);
-        }
-
-        // Add memory messages
-        messages.push(...this.memory.getAll());
-
-        const userMessage = {
-          role: "user" as const,
-          content: prompt,
-        };
-        messages.push(userMessage);
-
-        const completion = await this.openaiClient.chat.completions.create({
-          model: this.config.model,
-          temperature: this.config.temperature,
-          max_tokens: this.config.maxTokens,
-          messages,
-          response_format: { type: response_format },
-          tools: this.config.tools
-            ? convertToolsToOpenAIFormat(this.config.tools)
-            : undefined,
-        });
-
-        content = completion.choices[0]?.message?.content || "";
-        const toolCalls = completion.choices[0]?.message?.tool_calls;
-
-        // Handle tool calls
-        if (toolCalls?.length && this.config.tools) {
-          for (const toolCall of toolCalls) {
-            if (toolCall.type === "function") {
-              return executeToolCall(this.config.tools, toolCall);
-            }
-          }
-        }
-
-        this.addToMemory(userMessage, { role: "assistant", content });
-      } catch (error) {
-        console.error("OpenAI API Error:", error);
-        throw error;
       }
-    }
 
-    // If responseSchema is provided, validate and parse the response
-    if (this.config.responseSchema) {
-      if (this.config.debug) {
-        const responseJson = zodToJson(this.config.responseSchema);
-        console.log("Expected Schema:", JSON.stringify(responseJson));
-        console.log("Response:", content);
+      // If there's no tool call, try to parse the response
+      const content = response.message.content;
+      if (!content) {
+        throw new Error("No content in response");
       }
 
       const parsedContent = safeJSONParse(content);
       const parsedResponse =
-        this.config.responseSchema.safeParse(parsedContent);
+        this.config.responseSchema?.safeParse(parsedContent);
 
-      if (!parsedResponse.success) {
-        console.error("Response does not match schema:", parsedResponse.error);
-        throw new Error("Response does not match schema");
+      if (!parsedResponse?.success) {
+        console.error("Response does not match schema:", parsedResponse?.error);
+        throw new Error("Response validation failed");
       }
 
-      return this.config.responseSchema.parse(parsedContent);
+      return parsedResponse?.data;
     }
-
-    return content as TResponse;
   }
 }
