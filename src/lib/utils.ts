@@ -33,7 +33,7 @@ export function zodToJson(schema: z.ZodType): object {
   // Handle object schemas
   if (schema instanceof z.ZodObject) {
     const properties = Object.fromEntries(
-      Object.entries(schema.shape).map(([key, field]) => [
+      Object.entries(schema.shape as Record<string, z.ZodType>).map(([key, field]) => [
         key,
         zodTypeToJsonSchema(field),
       ])
@@ -42,7 +42,7 @@ export function zodToJson(schema: z.ZodType): object {
       type: "object",
       properties,
       required: Object.keys(schema.shape).filter(
-        (k) => !(schema.shape[k] as any)._def.isOptional
+        (k) => !(schema.shape[k] as z.ZodType)._def.isOptional
       ),
     };
   }
