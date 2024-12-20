@@ -29,7 +29,7 @@ export function safeJSONParse(content: string): any | undefined {
  */
 export function zodToJson(schema: z.ZodType): object {
   if (!schema) return {};
-  
+
   // Handle object schemas
   if (schema instanceof z.ZodObject) {
     return Object.fromEntries(
@@ -42,7 +42,7 @@ export function zodToJson(schema: z.ZodType): object {
       ])
     );
   }
-  
+
   // Handle single field schemas
   return {
     type: (schema as any)._def.typeName,

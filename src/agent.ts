@@ -101,7 +101,10 @@ export class Agent<TResponse = string> {
       });
 
       // If there's a tool call, execute it and continue the conversation
-      if (response.message.tool_calls && response.message.tool_calls.length > 0) {
+      if (
+        response.message.tool_calls &&
+        response.message.tool_calls.length > 0
+      ) {
         const toolCall = response.message.tool_calls[0];
         const tool = this.config.tools?.find(
           (t) => t.name === toolCall.function.name
@@ -124,7 +127,9 @@ export class Agent<TResponse = string> {
           // Continue the conversation
           continue;
         } catch (error) {
-          throw new Error(`Failed to execute tool ${toolCall.function.name}: ${error}`);
+          throw new Error(
+            `Failed to execute tool ${toolCall.function.name}: ${error}`
+          );
         }
       }
 
@@ -137,10 +142,14 @@ export class Agent<TResponse = string> {
       // If we have a response schema, validate and parse the response
       if (this.config.responseSchema) {
         const parsedContent = safeJSONParse(content);
-        const parsedResponse = this.config.responseSchema.safeParse(parsedContent);
+        const parsedResponse =
+          this.config.responseSchema.safeParse(parsedContent);
 
         if (!parsedResponse.success) {
-          console.error("Response does not match schema:", parsedResponse.error);
+          console.error(
+            "Response does not match schema:",
+            parsedResponse.error
+          );
           throw new Error("Response validation failed");
         }
 
