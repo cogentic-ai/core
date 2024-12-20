@@ -33,20 +33,20 @@ export function zodToJson(schema: z.ZodType): object {
     return { type: "object", properties: {} };
   }
 
-  console.log("Schema:", schema);
-
   // Handle object schemas
   if (schema instanceof z.ZodObject) {
+    const shape = schema._def.shape();
     const properties = Object.fromEntries(
-      Object.entries(schema.shape as Record<string, z.ZodType>).map(
-        ([key, field]) => [key, zodTypeToJsonSchema(field)]
-      )
+      Object.entries(shape).map(([key, field]) => [
+        key,
+        zodTypeToJsonSchema(field),
+      ])
     );
     return {
       type: "object",
       properties,
-      required: Object.keys(schema.shape).filter((k) => {
-        const field = schema.shape[k] as z.ZodType;
+      required: Object.keys(shape).filter((k) => {
+        const field = shape[k] as z.ZodType;
         return !(field instanceof z.ZodOptional);
       }),
     };
