@@ -53,6 +53,7 @@ export function zodToJson(schema: z.ZodType): object {
     };
   }
 
+  console.log("Schma is not an object: ");
   return zodTypeToJsonSchema(schema);
 }
 
