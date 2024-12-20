@@ -36,6 +36,7 @@ export function zodToJson(schema: z.ZodType): object {
   // Handle object schemas
   if (schema instanceof z.ZodObject) {
     const shape = schema._def.shape() as Record<string, z.ZodType>;
+    console.log("Shape: ", shape);
     const properties = Object.fromEntries(
       Object.entries(shape).map(([key, field]) => [
         key,
