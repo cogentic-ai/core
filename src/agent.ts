@@ -79,11 +79,6 @@ export class Agent<TResponse = string> {
       { role: "user", content: prompt },
     ];
 
-    console.log(
-      "CONVERTING TOOLS FORMAT: ",
-      convertToolsToOpenAIFormat(this.config.tools!)
-    );
-
     let loopCount = 0;
     while (true) {
       console.log(`Agent running... ${loopCount}`);
