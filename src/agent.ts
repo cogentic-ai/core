@@ -83,7 +83,11 @@ export class Agent<TResponse = string> {
       { role: "user", content: prompt },
     ];
 
+    let loopCount = 0;
     while (true) {
+      console.log(`Agent running... ${loopCount}`);
+      loopCount++;
+
       const completion = await this.openaiClient.chat.completions.create({
         model: this.config.model,
         messages,
@@ -93,47 +97,57 @@ export class Agent<TResponse = string> {
           ? convertToolsToOpenAIFormat(this.config.tools)
           : undefined,
       });
+      console.log(`Completion: ${JSON.stringify(completion)} `);
 
       const response = completion.choices[0];
-      messages.push({
-        role: response.message.role,
-        content: response.message.content || "",
-      });
+      console.log(
+        `Response: ${response.message.role}: ${response.message.content}`
+      );
 
       // If there's a tool call, execute it and continue the conversation
       if (
         response.message.tool_calls &&
         response.message.tool_calls.length > 0
       ) {
-        const toolCall = response.message.tool_calls[0];
-        const tool = this.config.tools?.find(
-          (t) => t.name === toolCall.function.name
-        );
+        // Add the assistant's message with all tool calls
+        messages.push(response.message);
 
-        if (!tool) {
-          throw new Error(`Tool ${toolCall.function.name} not found`);
-        }
-
-        try {
-          const args = JSON.parse(toolCall.function.arguments);
-          const result = await tool.handler(args);
-
-          messages.push({
-            role: "assistant",
-            content: JSON.stringify(result),
-            tool_call_id: toolCall.id,
-          });
-
-          // Continue the conversation
-          continue;
-        } catch (error) {
-          throw new Error(
-            `Failed to execute tool ${toolCall.function.name}: ${error}`
+        // Execute all tool calls and add their responses
+        for (const toolCall of response.message.tool_calls) {
+          const tool = this.config.tools?.find(
+            (t) => t.name === toolCall.function.name
           );
+
+          if (!tool) {
+            throw new Error(`Tool ${toolCall.function.name} not found`);
+          }
+
+          try {
+            const args = JSON.parse(toolCall.function.arguments);
+            const result = await tool.function(args);
+
+            console.log("RESULT IN AGENT: ", result);
+
+            // Add the function's response message
+            messages.push({
+              role: "tool",
+              content: JSON.stringify(result),
+              tool_call_id: toolCall.id,
+            });
+          } catch (error) {
+            throw new Error(
+              `Failed to execute tool ${toolCall.function.name}: ${error}`
+            );
+          }
         }
+
+        // Continue the conversation after all tool calls are handled
+        continue;
       }
 
-      // If there's no tool call, try to parse the response
+      // If there's no tool call, add the response and process it
+      messages.push(response.message);
+
       const content = response.message.content;
       if (!content) {
         throw new Error("No content in response");

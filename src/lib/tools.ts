@@ -7,7 +7,7 @@ export interface Tool {
   name: string;
   description: string;
   parameters: z.ZodObject<any>;
-  handler: (args: any) => Promise<any>;
+  function: (args: any) => Promise<any>;
 }
 
 export interface ToolCall {
