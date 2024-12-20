@@ -7,11 +7,14 @@
     "esModuleInterop": true,
     "strict": true,
     "outDir": "./dist",
-    "rootDir": ".",
+    "rootDir": "./src",
     "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
     "experimentalDecorators": true,
-    "emitDecoratorMetadata": true
+    "emitDecoratorMetadata": true,
+    "skipLibCheck": true
   },
-  "include": ["src/**/*", "test/**/*", "examples/**/*.ts"],
-  "exclude": ["node_modules"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "test", "examples"]
 }
