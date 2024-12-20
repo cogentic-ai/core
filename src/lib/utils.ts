@@ -28,25 +28,25 @@ export function safeJSONParse(content: string): any | undefined {
  * Convert a Zod schema into an OpenAI-compatible JSON Schema object
  */
 export function zodToJson(schema: z.ZodType): object {
-  if (!schema) return { type: "object", properties: {} };
+  if (!schema) {
+    console.log("No schema provided");
+    return { type: "object", properties: {} };
+  }
 
   // Handle object schemas
   if (schema instanceof z.ZodObject) {
     const properties = Object.fromEntries(
-      Object.entries(schema.shape as Record<string, z.ZodType>).map(([key, field]) => [
-        key,
-        zodTypeToJsonSchema(field),
-      ])
+      Object.entries(schema.shape as Record<string, z.ZodType>).map(
+        ([key, field]) => [key, zodTypeToJsonSchema(field)]
+      )
     );
     return {
       type: "object",
       properties,
-      required: Object.keys(schema.shape).filter(
-        (k) => {
-          const field = schema.shape[k] as z.ZodType;
-          return !(field instanceof z.ZodOptional);
-        }
-      ),
+      required: Object.keys(schema.shape).filter((k) => {
+        const field = schema.shape[k] as z.ZodType;
+        return !(field instanceof z.ZodOptional);
+      }),
     };
   }
 
