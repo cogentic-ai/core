@@ -1,12 +1,8 @@
 import { openai as defaultOpenAI } from "./lib/openai";
+import { zodResponseFormat } from "openai/helpers/zod";
 import type OpenAI from "openai";
 import { z } from "zod";
-import {
-  Tool,
-  convertToolsToOpenAIFormat,
-  executeToolCall,
-  createToolsSystemPrompt,
-} from "./lib/tools";
+import { Tool, convertToolsToOpenAIFormat } from "./lib/tools";
 import { Message, Memory } from "./lib/memory";
 import { validateAndFormatJSON, safeJSONParse, zodToJson } from "./lib/utils";
 
@@ -83,6 +79,11 @@ export class Agent<TResponse = string> {
       { role: "user", content: prompt },
     ];
 
+    console.log(
+      "CONVERTING TOOLS FORMAT: ",
+      convertToolsToOpenAIFormat(this.config.tools!)
+    );
+
     let loopCount = 0;
     while (true) {
       console.log(`Agent running... ${loopCount}`);
@@ -91,16 +92,17 @@ export class Agent<TResponse = string> {
       const completion = await this.openaiClient.chat.completions.create({
         model: this.config.model,
         messages: messages as any, // TODO: Fix type casting
-        tools: this.config.tools ? convertToolsToOpenAIFormat(this.config.tools) : undefined,
+        tools: this.config.tools
+          ? convertToolsToOpenAIFormat(this.config.tools)
+          : undefined,
         temperature: options.temperature ?? this.config.temperature,
         max_tokens: options.maxTokens ?? this.config.maxTokens,
+        response_format: this.config.responseSchema
+          ? zodResponseFormat(this.config.responseSchema, "response_format")
+          : undefined,
       });
-      console.log(`Completion: ${JSON.stringify(completion)} `);
 
       const response = completion.choices[0];
-      console.log(
-        `Response: ${response.message.role}: ${response.message.content}`
-      );
 
       // If there's a tool call, execute it and continue the conversation
       if (
@@ -123,8 +125,6 @@ export class Agent<TResponse = string> {
           try {
             const args = JSON.parse(toolCall.function.arguments);
             const result = await tool.function(args);
-
-            console.log("RESULT IN AGENT: ", result);
 
             // Add the function's response message
             messages.push({
