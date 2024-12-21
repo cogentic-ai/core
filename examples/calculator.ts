@@ -15,7 +15,6 @@ const calculatorTool: Tool = {
     a: number;
     b: number;
   }) => {
-    console.log(`Executing CALCULATOR ${args.operation}(${args.a}, ${args.b})`);
     switch (args.operation) {
       case "add":
         return args.a + args.b;
@@ -42,15 +41,6 @@ const responseSchema = z.object({
 const agent = new Agent({
   model: "gpt-4o-mini",
   systemPrompt: `You are a helpful math assistant that can perform calculations.
-  
-  ${createToolsSystemPrompt([calculatorTool])}
-  
-  Always format your final response as a JSON object with these fields:
-  {
-    "explanation": "A text explanation of the calculation",
-    "result": "The numeric result of the calculation"
-  }
-  
   If you don't know the answer, just say that you don't know. Don't try to make up an answer.`,
   tools: [calculatorTool],
   responseSchema,
@@ -64,19 +54,19 @@ async function main() {
     const result1 = await agent.run("What is 15 plus 27?");
     console.log(result1);
 
-    // More complex calculation with explanation
-    console.log("\n=== Division Example ===");
-    const result2 = await agent.run(
-      "If I have 120 items and need to divide them into 5 equal groups, how many items will be in each group?"
-    );
-    console.log(result2);
+    // // More complex calculation with explanation
+    // console.log("\n=== Division Example ===");
+    // const result2 = await agent.run(
+    //   "If I have 120 items and need to divide them into 5 equal groups, how many items will be in each group?"
+    // );
+    // console.log(result2);
 
-    // Multiple operations
-    console.log("\n=== Complex Example ===");
-    const result3 = await agent.run(
-      "If I multiply 8 by 6 and then subtract 13, what do I get?"
-    );
-    console.log(result3);
+    // // Multiple operations
+    // console.log("\n=== Complex Example ===");
+    // const result3 = await agent.run(
+    //   "If I multiply 8 by 6 and then subtract 13, what do I get?"
+    // );
+    // console.log(result3);
   } catch (error) {
     console.error("Error:", error);
   }
