@@ -36,16 +36,17 @@ export function convertToolsToOpenAIFormat(
   }));
 }
 
-export async function executeToolCall(tools: Tool[], toolCall: ToolCall) {
-  const tool = tools.find((t) => t.name === toolCall.function.name);
+// export async function executeToolCall(tools: Tool[], toolCall: ToolCall) {
+//   console.log("Executing tool:", toolCall.function.name);
+//   const tool = tools.find((t) => t.name === toolCall.function.name);
 
-  if (!tool) {
-    throw new Error(`Tool ${toolCall.function.name} not found`);
-  }
+//   if (!tool) {
+//     throw new Error(`Tool ${toolCall.function.name} not found`);
+//   }
 
-  const args = JSON.parse(toolCall.function.arguments);
-  return tool.function(args);
-}
+//   const args = JSON.parse(toolCall.function.arguments);
+//   return tool.function(args);
+// }
 
 export function createToolsSystemPrompt(tools: Tool[]): string {
   return `You have access to the following tools:
