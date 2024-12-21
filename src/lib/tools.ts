@@ -22,10 +22,6 @@ export interface ToolCall {
 export function convertToolsToOpenAIFormat(
   tools: Tool[]
 ): ChatCompletionTool[] {
-  console.log("TOOLS:", tools);
-  console.log("PARMAS:", tools[0].parameters);
-  console.log("ZOD TO JSON: ", zodToJson(tools[0].parameters));
-
   return tools.map((tool) => ({
     type: "function" as const,
     function: {
