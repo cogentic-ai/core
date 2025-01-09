@@ -8,26 +8,28 @@ A TypeScript first Agent framework, providing type-safe interactions with models
 
 - ✓ Type-safe Agent implementation
 - ✓ Runtime validation using Zod
-- ✓ OpenAI integration
+- ✓ OpenAI integration with parsed responses
 - ✓ Cost tracking and metrics
 - ✓ System prompts
 - ✓ Message history
 - ✓ Error handling and retries
 - ✓ Comprehensive test suite
+- ✓ Schema-based response parsing
 
 ### Tool Integration (⟳ In Progress)
 
 - ✓ Basic tool registration and execution
 - ✓ Tool call handling with OpenAI
-- ⟳ Tool validation and type safety
-- ⟳ Tool retry mechanisms
+- ✓ Tool validation and type safety
+- ✓ Strict mode for tool execution
+- ✓ Tool retry mechanisms
 - Tool documentation generation (Coming soon)
 - Tool dependency injection (Coming soon)
 
 ### Coming Soon
 
 - Open model support
-- Memeory management, working and persistent memory
+- Memory management, working and persistent memory
 - Enhanced system prompts with templates
 - Dynamic context management
 - Provider abstraction layer
@@ -40,7 +42,7 @@ A TypeScript first Agent framework, providing type-safe interactions with models
 ### Simple Chat
 
 ```typescript
-import { Agent } from "cogentic-ai-typescript";
+import { Agent } from "cogentic/core";
 
 const agent = new Agent({
   model: "gpt-4o-mini",
@@ -53,11 +55,11 @@ console.log(response); // "Hello! How can I help you today?"
 
 ### Schema Validation
 
-Use Zod schemas to ensure type-safe responses:
+Use Zod schemas to ensure type-safe responses with automatic parsing:
 
 ```typescript
 import { z } from "zod";
-import { Agent } from "cogentic-ai-typescript";
+import { Agent } from "cogentic/core";
 
 // Define your response schema
 const UserSchema = z.object({
@@ -74,7 +76,7 @@ const agent = new Agent({
   debug: true, // Enable debug logging
 });
 
-// Get a type-safe response
+// Get a type-safe response that's automatically parsed
 const user = await agent.run("Get info for John Doe");
 console.log(user.name); // TypeScript knows this is a string
 console.log(user.age); // TypeScript knows this is a number
@@ -84,7 +86,7 @@ console.log(user.email); // TypeScript knows this is a string
 The agent will:
 
 1. Automatically include schema information in the prompt
-2. Validate the LLM's response against your schema
+2. Parse and validate the LLM's response against your schema
 3. Provide proper TypeScript types for the response
 4. Log validation details when debug is enabled
 
@@ -106,7 +108,7 @@ const agent = new Agent({
 Use the `zodToJson` utility to inspect schemas:
 
 ```typescript
-import { zodToJson } from "cogentic-ai-typescript";
+import { zodToJson } from "cogentic/core";
 
 const schema = z.object({
   name: z.string().describe("User name"),
@@ -144,19 +146,17 @@ console.log(result);
 ### Tool Integration
 
 ```typescript
+import { z } from "zod";
+
 const calculator: Tool = {
   name: "calculator",
   description: "Perform basic arithmetic",
-  parameters: {
-    type: "object",
-    properties: {
-      operation: { type: "string", enum: ["add", "subtract"] },
-      a: { type: "number" },
-      b: { type: "number" },
-    },
-    required: ["operation", "a", "b"],
-  },
-  func: async (args) => {
+  parameters: z.object({
+    operation: z.enum(["add", "subtract"]),
+    a: z.number(),
+    b: z.number(),
+  }),
+  function: async (args) => {
     switch (args.operation) {
       case "add":
         return args.a + args.b;
@@ -172,7 +172,7 @@ const agent = new Agent({
 });
 
 const result = await agent.run("What is 5 + 3?");
-console.log(result.data); // Output: 8
+console.log(result); // Output: 8
 ```
 
 ### Custom Validation
