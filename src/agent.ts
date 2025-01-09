@@ -5,6 +5,7 @@ import { z } from "zod";
 import { Tool, convertToolsToOpenAIFormat } from "./lib/tools";
 import { Message, Memory } from "./lib/memory";
 import { validateAndFormatJSON, safeJSONParse, zodToJson } from "./lib/utils";
+import { ParsedChatCompletion } from "openai/resources/beta/chat/completions.mjs";
 
 export interface AgentConfig<TResponse> {
   model: string;
@@ -84,7 +85,7 @@ export class Agent<TResponse = string> {
       console.log(`Agent running... ${loopCount}`);
       loopCount++;
 
-      let response;
+      let response: any;
 
       if (this.config.responseSchema) {
         const completion = await this.openaiClient.beta.chat.completions.parse({
