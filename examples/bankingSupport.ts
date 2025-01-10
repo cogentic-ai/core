@@ -5,15 +5,14 @@ import { Agent } from "../src/agent";
 const SupportResult = z.object({
   support_advice: z.string().describe("Advice returned to the customer"),
   block_card: z.boolean().describe("Whether to block their card"),
-  risk: z.number().min(0).max(10).describe("Risk level of query"),
+  risk: z.number().describe("Risk level of query"),
 });
 
 // Create an agent with the response type
 const supportAgent = new Agent({
   model: "gpt-4o-mini",
   responseSchema: SupportResult,
-  systemPrompt:
-    `You are a support agent in our bank. Help customers with their queries and assess risk levels.
+  systemPrompt: `You are a support agent in our bank. Help customers with their queries and assess risk levels.
     
     Always format your response as a JSON object with these fields:
     {
