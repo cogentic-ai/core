@@ -7,13 +7,14 @@ export interface Tool {
   name: string;
   description: string;
   parameters: z.ZodType<any>;
-  function: (args: any) => Promise<any>;
+  function: (args: any, strict?: boolean) => Promise<any>;
 }
 
 export interface ToolCall {
   id: string;
   type: "function";
   function: {
+    strict: boolean;
     name: string;
     arguments: string;
   };
@@ -25,12 +26,16 @@ export function convertToolsToOpenAIFormat(
   return tools.map((tool) => ({
     type: "function" as const,
     function: {
+      strict: true,
       name: tool.name,
       description: tool.description,
-      parameters: zodToJson(tool.parameters) as {
-        type: "object";
-        properties: Record<string, unknown>;
-        required?: string[];
+      parameters: {
+        ...(zodToJson(tool.parameters) as {
+          type: "object";
+          properties: Record<string, unknown>;
+          required?: string[];
+        }),
+        additionalProperties: false,
       },
     },
   }));
