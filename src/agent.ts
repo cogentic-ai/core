@@ -84,20 +84,34 @@ export class Agent<TResponse = string> {
       console.log(`Agent running... ${loopCount}`);
       loopCount++;
 
-      const completion = await this.openaiClient.chat.completions.create({
-        model: this.config.model,
-        messages: messages as any, // TODO: Fix type casting
-        tools: this.config.tools
-          ? convertToolsToOpenAIFormat(this.config.tools)
-          : undefined,
-        temperature: options.temperature ?? this.config.temperature,
-        max_tokens: options.maxTokens ?? this.config.maxTokens,
-        response_format: this.config.responseSchema
-          ? zodResponseFormat(this.config.responseSchema, "response_format")
-          : undefined,
-      });
+      let response;
 
-      const response = completion.choices[0];
+      if (this.config.responseSchema) {
+        const completion = await this.openaiClient.beta.chat.completions.parse({
+          model: this.config.model,
+          messages: messages as any,
+          tools: this.config.tools
+            ? convertToolsToOpenAIFormat(this.config.tools)
+            : undefined,
+          max_tokens: options.maxTokens ?? this.config.maxTokens,
+          response_format: this.config.responseSchema
+            ? zodResponseFormat(this.config.responseSchema, "response_format")
+            : undefined,
+        });
+
+        response = completion.choices[0];
+      } else {
+        const completion = await this.openaiClient.chat.completions.create({
+          model: this.config.model,
+          messages: messages as any,
+          tools: this.config.tools
+            ? convertToolsToOpenAIFormat(this.config.tools)
+            : undefined,
+          max_tokens: options.maxTokens ?? this.config.maxTokens,
+        });
+
+        response = completion.choices[0];
+      }
 
       // If there's a tool call, execute it and continue the conversation
       if (
@@ -139,7 +153,12 @@ export class Agent<TResponse = string> {
       }
 
       // If there's no tool call, add the response and process it
-      messages.push(response.message);
+      // If we have a response schema, use the parsed response
+      if (this.config.responseSchema) {
+        messages.push(response.message.parsed);
+      } else {
+        messages.push(response.message);
+      }
 
       const content = response.message.content;
       if (!content) {
